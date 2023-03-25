@@ -30,7 +30,7 @@ shared_ptr<Preprocess> p_pre;
 shared_ptr<LI_Init> Init_LI;
 shared_ptr<ImuProcess> p_imu;
 shared_ptr<GNSSProcess> p_gnss;
-
+double time_update_last = 0.0, time_current = 0.0, time_predict_last_const = 0.0, t_last = 0.0;
 double time_diff_lidar_to_imu = 0.0;
 
 std::string gnss_ephem_topic, gnss_glo_ephem_topic, gnss_meas_topic, gnss_iono_params_topic;
