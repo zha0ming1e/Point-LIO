@@ -1,6 +1,8 @@
 common:
     lid_topic:  "/livox/lidar" 
     imu_topic:  "/livox/imu" 
+    # imu_topic: "/alphasense_driver_ros/imu"
+    # lid_topic: "/hesai/pandar"
     con_frame: false # true: if you need to combine several LiDAR frames into one
     con_frame_num: 1 # the number of frames combined
     cut_frame: false # true: if you need to cut one LiDAR frame into several subframes
@@ -8,8 +10,8 @@ common:
     time_diff_lidar_to_imu: 0.0 # Time offset between LiDAR and IMU calibrated by other algorithms, e.g., LI-Init (find in Readme)
 
 preprocess:
-    lidar_type: 1 
-    scan_line: 6
+    lidar_type: 1 # 4
+    scan_line: 6 # 32
     timestamp_unit: 1           # the unit of time/t field in the PointCloud2 rostopic: 0-second, 1-milisecond, 2-microsecond, 3-nanosecond.
     blind: 1.0 
 
@@ -25,6 +27,7 @@ mapping:
     gyr_cov_output: 1000 
     b_acc_cov: 0.0001 
     b_gyr_cov: 0.0001 
+    grav_cov_init:  0.00010
     imu_meas_acc_cov: 0.1 #0.1 # 0.1
     imu_meas_omg_cov: 0.1 #0.01 # 0.1
     gyr_cov_input: 0.01 # for IMU as input model
@@ -34,10 +37,82 @@ mapping:
     fov_degree: 90 
     det_range: 450.0
     gravity: [0.0, 0.0, -9.810] # [0.0, 9.810, 0.0] # # preknown gravity, use when imu_en is false or start from a non-stationary state
-    extrinsic_T: [ 0.04165, 0.02326, -0.0284 ]
+    extrinsic_T: [ 0.04165, 0.02326, -0.0284 ] # [-0.0380, -0.0085, -0.0730] # fg
     extrinsic_R: [ 1, 0, 0,
                    0, 1, 0,
                    0, 0, 1 ]
+    # extrinsic_R: [ 0.0, -1.0, 0.0,
+                #    -1.0, 0.0, 0.0,
+                #    0.0, 0.0, -1.0 ] # fg
+
+gnss:
+    gnss_enable: true
+    nolidar: false
+    quick_init: false
+    online_init: true # false is wei ming ti, maybe can work when this value is false now: yes
+    ephem_from_rinex: true
+    outlier_rejection: true # for offline initial and no lidar or broaden the outlier rejection threshold // can be modified as well
+    psr_dopp_weight: 1 # 
+    cp_weight: 1 # 
+    # odo_weight: 1 # 
+    gnss_meas_topic: "/ublox_driver/range_meas"           # GNSS raw measurement topic
+    gnss_ephem_topic: "/ublox_driver/ephem"               # GPS, Galileo, BeiDou ephemeris
+    gnss_glo_ephem_topic: "/ublox_driver/glo_ephem"       # GLONASS ephemeris
+    gnss_iono_params_topic: "/ublox_driver/iono_params"   # GNSS broadcast ionospheric parameters
+    gnss_tp_info_topic: "/ublox_driver/time_pulse_info"   # PPS time info
+    rtk_pvt_topic: "/ublox_driver/receiver_pvt"           # gnss pvt soln msg
+    rtk_lla_topic: "/ublox_driver/receiver_lla"           # nav sat fix
+    gnss_elevation_thres: 30            # satellite elevation threshold (degree) 30
+    gnss_psr_std_thres: 30.0             # pseudo-range std threshold
+    gnss_dopp_std_thres: 30.0            # doppler std threshold
+    gnss_cp_std_thres: 30.0            # carrier phase std threshold
+    gnss_cp_time_thres: 3000.0            # carrier phase time threshold  // try to increase this value: use more cp
+    gnss_track_num_thres: 20            # number of satellite tracking epochs before entering estimator
+    gtsam_variable_thres: 200            # is it important that delete factor one frame by one frame?
+    gtsam_marg_variable_thres: 1
+    gnss_sample_period: 0.2
+    outlier_thres: 0.1
+    window_size: 1 # <= 10
+    prior_noise: 0.1 #
+    marg_noise: 0.1 #
+    dt_noise: 0.1
+    acc_noise: 0.1 #
+    omg_noise: 0.1 #
+    b_acc_noise: 0.1 # important
+    b_omg_noise: 0.1 # 1/dt need to be modelled more accurately 
+    ddt_noise: 0.1 # 0.01
+    odo_noise: 0.1
+    psr_dopp_noise: 0.1
+    cp_noise: 0.001
+    gnss_local_online_sync: false                       # if perform online synchronization betwen GNSS and local time
+    local_trigger_info_topic: "/external_trigger"   # external trigger info of the local sensor, if `gnss_local_online_sync` is 1
+    gnss_local_time_diff: 9.062 # 18.0 # should be 27.062?   # difference between GNSS and local time (s), if `gnss_local_online_sync` is 0
+    gnss_iono_default_parameters: [0.1118E-07,  0.2235E-07, -0.4172E-06,  0.6557E-06, 0.1249E+06, -0.4424E+06,  0.1507E+07, -0.2621E+06]
+    gnss_extrinsic_T: [-0.5172, 0.0435, -0.0911] # fg # [0.0, -0.15, 0.3] # [-0.005, -0.1, 0.10] # gvins # [-0.39765, 0.13204, 0.0284] # m300 # 
+    # [-0.0759472920952561, -0.0039320527565750, -0.0016395029500217] # [-0.516857, 0.092900, 0.043450] # 
+    # offline_init_vec: [3959150, -87734.7, 4983270, 0.82415, 128.4, 560234, 560243, 560235, 560241] # 5644xx the value of the clock drift is very important!
+    # offline_init_vec: [3959140, -87732.6, 4983260, 0.82415, 128.4, 561384, 561393, 561385, 561391] # anc, yaw, ddt, dt 5644xx
+    # offline_init_vec: [-2419314.6837, 5379786.13, 2417860.077, 0.0, 85.3375, 591684.2, 591699.2, 591684.2, 591699.2] # anc, yaw, ddt, dt 5644xx
+    # offline_init_vec: [-2419300, 5379800, 2417850, 0.0, 85.3375, 589684.2, 589699.2, 589684.2, 589699.2] # anc, yaw, ddt, dt 5644xx
+    # offline_init_vec: [-2419300, 5379800, 2417850, 0.0, 85.3375, 631684.2, 631699.2, 631684.2, 631699.2] # anc, yaw, ddt, dt 5644xx
+    # offline_init_vec: [-2419300, 5379800, 2417850, 0.0, 85.3375, 627684.2, 627699.2, 627684.2, 627699.2] # anc, yaw, ddt, dt 5644xx
+    offline_init_vec: [3959150, -87734.7, 4983270, 0.82415, 128.4, 564454, 564463, 564455, 564461] # anc, yaw, ddt, dt 5644xx
+    # gnss_extrinsic_R: [ 1, 0, 0,
+    #                 0, 0, 1,
+    #                 0, -1, 0 ]
+    gnss_extrinsic_R: [ 1, 0, 0,
+                    0, -1, 0,
+                    0, 0, -1 ]
+
+initialization:
+    LIInit_en: false
+    cut_frame_num: 3 # 5 # must be positive integer
+    orig_odom_freq: 10
+    cut_frame: true
+    gyr_cov: 50 # 50
+    acc_cov: 2 # 2
+    online_refine_time: 15.0 # 20.0 # 
+    data_accum_length: 300 # 400 # 
 
 odometry: 
     publish_odometry_without_downsample: false

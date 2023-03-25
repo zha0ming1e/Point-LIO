@@ -67,7 +67,9 @@ struct dyn_share_modified
 	Eigen::Matrix<T, Eigen::Dynamic, 1> z;
 	Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> h_x;
 	Eigen::Matrix<T, 6, 1> z_IMU;
+	Eigen::Matrix<T, 9, 1> z_GNSS;
 	Eigen::Matrix<T, 6, 1> R_IMU;
+	Eigen::Matrix<T, 9, 9> h_GNSS;
 	bool satu_check[6];
 };
 
@@ -103,12 +105,13 @@ public:
 	esekf(const state &x = state(),
 		const cov  &P = cov::Identity()): x_(x), P_(P){};
 
-	void init_dyn_share_modified(processModel f_in, processMatrix1 f_x_in, measurementModel_dyn_share_modified h_dyn_share_in)
+	void init_dyn_share_modified_2h(processModel f_in, processMatrix1 f_x_in, measurementModel_dyn_share_modified h_dyn_share_in1, measurementModel_dyn_share_modified h_dyn_share_in3)
 	{
 		f = f_in;
 		f_x = f_x_in;
 		// f_w = f_w_in;
-		h_dyn_share_modified_1 = h_dyn_share_in;
+		h_dyn_share_modified_1 = h_dyn_share_in1;
+		h_dyn_share_modified_3 = h_dyn_share_in3;
 		maximum_iter = 1;
 		x_.build_S2_state();
 		x_.build_SO3_state();
@@ -116,13 +119,15 @@ public:
 		x_.build_SEN_state();
 	}
 	
-	void init_dyn_share_modified_2h(processModel f_in, processMatrix1 f_x_in, measurementModel_dyn_share_modified h_dyn_share_in1, measurementModel_dyn_share_modified h_dyn_share_in2)
+	void init_dyn_share_modified_3h(processModel f_in, processMatrix1 f_x_in, measurementModel_dyn_share_modified h_dyn_share_in1, measurementModel_dyn_share_modified h_dyn_share_in2,
+	 measurementModel_dyn_share_modified h_dyn_share_in3)
 	{
 		f = f_in;
 		f_x = f_x_in;
 		// f_w = f_w_in;
 		h_dyn_share_modified_1 = h_dyn_share_in1;
 		h_dyn_share_modified_2 = h_dyn_share_in2;
+		h_dyn_share_modified_3 = h_dyn_share_in3;
 		maximum_iter = 1;
 		x_.build_S2_state();
 		x_.build_SO3_state();
@@ -209,8 +214,8 @@ public:
 			Matrix<scalar_type, n, Eigen::Dynamic> K_;
 			// if(n > dof_Measurement)
 			{
-				PHT = P_. template block<n, 12>(0, 0) * h_x.transpose();
-				HPHT = h_x * PHT.topRows(12);
+				PHT = P_. template block<n, 6>(0, 0) * h_x.transpose();
+				HPHT = h_x * PHT.topRows(6);
 				for (int m = 0; m < dof_Measurement; m++)
 				{
 					HPHT(m, m) += m_noise;
@@ -281,7 +286,7 @@ public:
 			// }
 			// if(n > dof_Measurement)
 			{
-				P_ = P_ - K_*h_x*P_. template block<12, n>(0, 0);
+				P_ = P_ - K_*h_x*P_. template block<6, n>(0, 0);
 			}
 		}
 		return true;
@@ -297,8 +302,8 @@ public:
 
 			Matrix<scalar_type, 6, 1> z = dyn_share.z_IMU;
 
-			Matrix<double, 30, 6> PHT;
-            Matrix<double, 6, 30> HP;
+			Matrix<double, 24, 6> PHT;
+            Matrix<double, 6, 24> HP;
             Matrix<double, 6, 6> HPHT;
 			PHT.setZero();
 			HP.setZero();
@@ -307,25 +312,63 @@ public:
 			{
 				if (!dyn_share.satu_check[l_])
 				{
-					PHT.col(l_) = P_.col(15+l_) + P_.col(24+l_);
-					HP.row(l_) = P_.row(15+l_) + P_.row(24+l_);
+					PHT.col(l_) = P_.col(9+l_) + P_.col(18+l_);
+					HP.row(l_) = P_.row(9+l_) + P_.row(18+l_);
 				}
 			}
 			for (int l_ = 0; l_ < 6; l_++)
 			{
 				if (!dyn_share.satu_check[l_])
 				{
-					HPHT.col(l_) = HP.col(15+l_) + HP.col(24+l_);
+					HPHT.col(l_) = HP.col(9+l_) + HP.col(18+l_);
 				}
 				HPHT(l_, l_) += dyn_share.R_IMU(l_); //, l);
 			}
-        	Eigen::Matrix<double, 30, 6> K = PHT * HPHT.inverse(); 
+        	Eigen::Matrix<double, 24, 6> K = PHT * HPHT.inverse(); 
                                     
             Matrix<scalar_type, n, 1> dx_ = K * z; 
 
             P_ -= K * HP;
 			x_.boxplus(dx_);
 		}
+		return;
+	}
+	
+	void update_iterated_dyn_share_GNSS() {
+		
+		dyn_share_modified<scalar_type> dyn_share;
+		for(int i=0; i<maximum_iter; i++)
+		{
+			dyn_share.valid = true;
+			h_dyn_share_modified_3(x_, dyn_share);
+
+			// Matrix<scalar_type, 9, 1> z = dyn_share.z_GNSS;
+		
+			Matrix<double, 9, 9> Hsub_T = dyn_share.h_GNSS.transpose();
+			Matrix<double, n, 1> solution;
+			Matrix<double, n, 9> PHT;
+			Matrix<double, n, 9> K;
+			Matrix<double, 9, 9> HPHT;
+			Matrix<double, n, n> KH;
+			
+			{
+				PHT = P_.block<n, 9>(0, 0) * Hsub_T;
+				HPHT = dyn_share.h_GNSS * PHT;
+				for (int m_ = 0; m_ < 9; m_++)
+				{
+					HPHT(m_,m_) += dyn_share.M_noise;
+				}
+				K = PHT * HPHT.inverse();
+				KH = K * dyn_share.h_GNSS;
+			}
+		}
+			
+                                    
+            Matrix<scalar_type, n, 1> dx_ = K * dyn_share.z_GNSS;
+
+            P_ -= KH * P_;
+			x_.boxplus(dx_);
+		
 		return;
 	}
 	
@@ -377,6 +420,8 @@ private:
 	measurementModel_dyn_share_modified *h_dyn_share_modified_1;
 
 	measurementModel_dyn_share_modified *h_dyn_share_modified_2;
+
+	measurementModel_dyn_share_modified *h_dyn_share_modified_3;
 
 	int maximum_iter = 0;
 	scalar_type limit[n];

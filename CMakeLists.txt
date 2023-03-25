@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(point_lio)
+project(ligo)
 
 SET(CMAKE_BUILD_TYPE "Debug")
 
@@ -52,13 +52,19 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   pcl_ros
   tf
+  cv_bridge
   livox_ros_driver
   message_generation
   eigen_conversions
+  gnss_comm
 )
 
+find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(GTSAM REQUIRED QUIET)
 find_package(PCL 1.8 REQUIRED)
+find_package(Ceres REQUIRED)
+
 
 message(Eigen: ${EIGEN3_INCLUDE_DIR})
 
@@ -66,18 +72,42 @@ include_directories(
 	${catkin_INCLUDE_DIRS} 
   ${EIGEN3_INCLUDE_DIR}
   ${PCL_INCLUDE_DIRS}
+	${GTSAM_INCLUDE_DIR}
   ${PYTHON_INCLUDE_DIRS}
   include)
 
+link_directories(
+	include
+	${PCL_LIBRARY_DIRS}
+  ${OpenCV_LIBRARY_DIRS}
+  ${GTSAM_LIBRARY_DIRS}
+)
+
+add_message_files(
+  FILES
+  LocalSensorExternalTrigger.msg
+)
+
+generate_messages(
+ DEPENDENCIES
+ geometry_msgs
+)
+
 catkin_package(
   CATKIN_DEPENDS geometry_msgs nav_msgs roscpp rospy std_msgs message_runtime
-  DEPENDS EIGEN3 PCL
+  DEPENDS EIGEN3 PCL GTSAM
   INCLUDE_DIRS
 )
 
-add_executable(pointlio_mapping src/laserMapping.cpp include/ikd-Tree/ikd_Tree.cpp src/parameters.cpp src/preprocess.cpp src/Estimator.cpp)
-target_link_libraries(pointlio_mapping ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PYTHON_LIBRARIES})
-target_include_directories(pointlio_mapping PRIVATE ${PYTHON_INCLUDE_DIRS})
+add_executable(ligo_mapping src/laserMapping.cpp 
+                include/ikd-Tree/ikd_Tree.cpp 
+                include/LI_init/LI_init.cpp
+                src/parameters.cpp src/preprocess.cpp src/Estimator.cpp)
+target_link_libraries(ligo_mapping ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${CERES_LIBRARIES} ${OpenCV_LIBS} ${PYTHON_LIBRARIES} gtsam)
+target_link_libraries(ligo_mapping
+		dw
+		)
+target_include_directories(ligo_mapping PRIVATE ${PYTHON_INCLUDE_DIRS})
 
 
 

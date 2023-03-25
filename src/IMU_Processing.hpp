@@ -1,27 +1,23 @@
 #include <cmath>
 #include <math.h>
-#include <deque>
-#include <mutex>
-#include <thread>
-#include <fstream>
+// #include <deque>
+// #include <mutex>
+// #include <thread>
 #include <csignal>
 #include <ros/ros.h>
 #include <so3_math.h>
 #include <Eigen/Eigen>
+#include "Estimator.h"
 #include <common_lib.h>
 #include <pcl/common/io.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
-#include <condition_variable>
 #include <nav_msgs/Odometry.h>
-#include <pcl/common/transforms.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <tf/transform_broadcaster.h>
 #include <eigen_conversions/eigen_msg.h>
 #include <pcl_conversions/pcl_conversions.h>
-#include <sensor_msgs/Imu.h>
 #include <sensor_msgs/PointCloud2.h>
-#include <geometry_msgs/Vector3.h>
 
 /// *************Preconfiguration
 
@@ -37,22 +33,59 @@ class ImuProcess
   ~ImuProcess();
   
   void Reset();
-  void Reset(double start_timestamp, const sensor_msgs::ImuConstPtr &lastimu);
   void Process(const MeasureGroup &meas, PointCloudXYZI::Ptr pcl_un_);
+  void set_gyr_cov(const V3D &scaler);
+  void set_acc_cov(const V3D &scaler);
+  void Set_init(Eigen::Matrix3d &rot);
+  void pointBodyToWorld_li_init(PointType const * const pi, PointType * const po);
 
-  ofstream fout_imu;
-  // double first_lidar_time;
+  state_input state_LI_Init;
+  MD(12, 12) state_cov = MD(12, 12)::Identity();
   int    lidar_type;
+  V3D    gravity_;
   bool   imu_en;
-  V3D mean_acc;
+  V3D    mean_acc;
   bool   imu_need_init_ = true;
+  bool   after_imu_init_ = false;
   bool   b_first_frame_ = true;
+  bool   LI_init_done = true;
+  bool   UseLIInit;
+  double time_last_scan = 0.0;
+  V3D cov_gyr_scale = V3D(0.0001, 0.0001, 0.0001);
+  V3D cov_vel_scale = V3D(0.0001, 0.0001, 0.0001);
 
  private:
   void IMU_init(const MeasureGroup &meas, int &N);
+  void Forward_propagation_without_imu(const MeasureGroup &meas, PointCloudXYZI &pcl_out);
   V3D mean_gyr;
-  int    init_iter_num = 1;
+  int init_iter_num = 1;
 };
+
+void ImuProcess::pointBodyToWorld_li_init(PointType const * const pi, PointType * const po)
+{    
+    V3D p_body(pi->x, pi->y, pi->z);
+    
+    V3D p_global;
+
+    {
+        p_global = state_LI_Init.rot * p_body + state_LI_Init.pos;
+    }
+
+    po->x = p_global(0);
+    po->y = p_global(1);
+    po->z = p_global(2);
+    po->intensity = pi->intensity;
+}
+
+void ImuProcess::set_gyr_cov(const V3D &scaler)
+{
+  cov_gyr_scale = scaler;
+}
+
+void ImuProcess::set_acc_cov(const V3D &scaler)
+{
+  cov_vel_scale = scaler;
+}
 
 ImuProcess::ImuProcess()
     : b_first_frame_(true), imu_need_init_(true)
@@ -61,6 +94,8 @@ ImuProcess::ImuProcess()
   init_iter_num = 1;
   mean_acc      = V3D(0, 0, -1.0);
   mean_gyr      = V3D(0, 0, 0);
+  after_imu_init_ = false;
+  state_cov.setIdentity();
 }
 
 ImuProcess::~ImuProcess() {}
@@ -68,10 +103,49 @@ ImuProcess::~ImuProcess() {}
 void ImuProcess::Reset() 
 {
   ROS_WARN("Reset ImuProcess");
-  mean_acc      = V3D(0, 0, -1.0);
+  mean_acc      = V3D(0, 0, 0.0);
   mean_gyr      = V3D(0, 0, 0);
   imu_need_init_    = true;
   init_iter_num     = 1;
+  after_imu_init_   = false;
+  if (UseLIInit)
+  {
+    LI_init_done = false;
+    state_LI_Init = state_input();
+    state_cov.setIdentity();
+    state_cov.block<3, 3>(9, 9) = Eigen::Matrix<double, 3, 3>::Identity() * 0.00001;
+  }
+  time_last_scan = 0.0;
+}
+
+void ImuProcess::Set_init(Eigen::Matrix3d &rot)
+{
+  /** 1. initializing the gravity, gyro bias, acc and gyro covariance
+   ** 2. normalize the acceleration measurenments to unit gravity **/
+  V3D tmp_gravity = - mean_acc / mean_acc.norm() * G_m_s2; // state_gravity;
+  M3D hat_grav;
+  hat_grav << 0.0, gravity_(2), -gravity_(1),
+              -gravity_(2), 0.0, gravity_(0),
+              gravity_(1), -gravity_(0), 0.0;
+  double align_norm = (hat_grav * tmp_gravity).norm() / gravity_.norm() / gravity_.norm();
+  double align_cos = gravity_.transpose() * tmp_gravity;
+  align_cos = align_cos / gravity_.norm() / gravity_.norm();
+  if (align_norm < 1e-6)
+  {
+    if (align_cos > 1e-6)
+    {
+      rot = Eye3d;
+    }
+    else
+    {
+      rot = -Eye3d;
+    }
+  }
+  else
+  {
+    V3D align_angle = hat_grav * tmp_gravity / (hat_grav * tmp_gravity).norm() * acos(align_cos); 
+    rot = Exp(align_angle(0), align_angle(1), align_angle(2));
+  }
 }
 
 void ImuProcess::IMU_init(const MeasureGroup &meas, int &N)
@@ -106,27 +180,102 @@ void ImuProcess::IMU_init(const MeasureGroup &meas, int &N)
   }
 }
 
+void ImuProcess::Forward_propagation_without_imu(const MeasureGroup &meas, PointCloudXYZI &pcl_out) {
+    pcl_out = *(meas.lidar);
+    /*** sort point clouds by offset time ***/
+    const double &pcl_beg_time = meas.lidar_beg_time;
+    sort(pcl_out.points.begin(), pcl_out.points.end(), time_list);
+    const double &pcl_end_offset_time = pcl_out.points.back().curvature / double(1000);
+
+    MD(12, 12) F_x, cov_w;
+    double dt = 0.0;
+
+    if (b_first_frame_) {
+        dt = 0.1;
+        b_first_frame_ = false;
+    } else {
+        dt = pcl_beg_time - time_last_scan;
+        time_last_scan = pcl_beg_time;
+    }
+
+    /* covariance propagation */
+    F_x.setIdentity();
+    cov_w.setZero();
+    /** In CV model, bg represents angular velocity **/
+    /** In CV model，ba represents linear acceleration **/
+    V3D dR = state_LI_Init.bg * dt;
+    // M3D Exp_f = Exp(state_LI_Init.bg, dt);
+    F_x.block<3, 3>(3, 3) = Exp(state_LI_Init.bg, -dt);
+    F_x.block<3, 3>(3, 9) = Eye3d * dt;
+    F_x.block<3, 3>(0, 6) = Eye3d * dt;
+
+
+    cov_w.block<3, 3>(9, 9).diagonal() = cov_gyr_scale * dt * dt;
+    cov_w.block<3, 3>(6, 6).diagonal() = cov_vel_scale * dt * dt;
+
+    /** Forward propagation of covariance**/
+    state_cov = F_x * state_cov * F_x.transpose() + cov_w;
+
+    /** Forward propagation of attitude **/
+    state_LI_Init.rot.boxplus(dR); // = state_LI_Init.rot * Exp_f;
+                                                                                                            
+    /** Position Propagation **/                 
+    state_LI_Init.pos.boxplus(state_LI_Init.vel * dt);                                                                                                   
+                 
+    /**CV model： un-distort pcl using linear interpolation **/        
+    auto it_pcl = pcl_out.points.end() - 1;
+    double dt_j = 0.0;
+    for(; it_pcl != pcl_out.points.begin(); it_pcl --)
+    {
+      dt_j= pcl_end_offset_time - it_pcl->curvature/double(1000);
+      M3D R_jk(Exp(state_inout.bias_g, - dt_j));
+      V3D P_j(it_pcl->x, it_pcl->y, it_pcl->z);
+      // Using rotation and translation to un-distort points
+      V3D p_jk;
+      p_jk = - state_LI_Init.rot.transpose() * state_LI_Init.vel * dt_j;
+
+      V3D P_compensate =  R_jk * P_j + p_jk;
+
+      /// save Undistorted points and their rotation
+      it_pcl->x = P_compensate(0);
+      it_pcl->y = P_compensate(1);
+      it_pcl->z = P_compensate(2);
+    }
+}
+
 void ImuProcess::Process(const MeasureGroup &meas, PointCloudXYZI::Ptr cur_pcl_un_)
 {  
   if (imu_en)
   {
     if(meas.imu.empty())  return;
-    ROS_ASSERT(meas.lidar != nullptr);
 
     if (imu_need_init_)
     {
-      /// The very first lidar frame
-      IMU_init(meas, init_iter_num);
-
-      imu_need_init_ = true;
-
-      if (init_iter_num > MAX_INI_COUNT)
+      if (UseLIInit)
       {
-        imu_need_init_ = false;
+        if(!LI_init_done){
+          Forward_propagation_without_imu(meas, *cur_pcl_un_);
+        }
+        else{
+          printf("[Refinement] Switch to LIO mode, online refinement begins.\n\n");
+          imu_need_init_ = false;
+        }
+      }
+      else
+      {
+        /// The very first lidar frame
+        IMU_init(meas, init_iter_num);
+
+        imu_need_init_ = true;
+
+        if (init_iter_num > MAX_INI_COUNT)
+        {
+          imu_need_init_ = false;
+        }
       }
       return;
     }
-
+    if (!after_imu_init_) after_imu_init_ = true;
     *cur_pcl_un_ = *(meas.lidar);
     return;
   }

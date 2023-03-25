@@ -6,6 +6,24 @@
 #include <Eigen/Core>
 #include <cstring>
 #include "preprocess.h"
+#include "GNSS_Processing_fg.hpp"
+#include "IMU_Processing.hpp"
+#include "LI_init/LI_init.h"
+#include <sensor_msgs/NavSatFix.h>
+#include <livox_ros_driver/CustomMsg.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <mutex>
+#include <omp.h>
+#include <math.h>
+#include <thread>
+#include <fstream>
+#include <csignal>
+#include <unistd.h>
+#include <Python.h>
+#include <condition_variable>
+#include <sensor_msgs/Imu.h>
+#include <pcl/common/transforms.h>
+#include <geometry_msgs/Vector3.h>
 
 extern bool is_first_frame;
 extern double lidar_end_time, first_lidar_time, time_con;
@@ -30,11 +48,31 @@ extern double gyr_cov_output, acc_cov_output, b_gyr_cov, b_acc_cov;
 extern double imu_meas_acc_cov, imu_meas_omg_cov; 
 extern int    lidar_type, pcd_save_interval;
 extern std::vector<double> gravity_init;
-extern std::vector<double> extrinT;
-extern std::vector<double> extrinR;
+extern std::vector<double> extrinT, extrinT_gnss, offline_init_vec;
+extern std::vector<double> extrinR, extrinR_gnss;
 extern bool   runtime_pos_log, pcd_save_en, path_en;
 extern bool   scan_pub_en, scan_body_pub_en;
 extern shared_ptr<Preprocess> p_pre;
+extern shared_ptr<LI_Init> Init_LI;
+extern shared_ptr<ImuProcess> p_imu;
+extern shared_ptr<GNSSProcess> p_gnss;
+
 extern double time_diff_lidar_to_imu;
+extern std::string gnss_ephem_topic, gnss_glo_ephem_topic, gnss_meas_topic, gnss_iono_params_topic;
+extern std::string gnss_tp_info_topic, local_trigger_info_topic, rtk_pvt_topic, rtk_lla_topic;
+extern std::vector<double> default_gnss_iono_params;
+extern double gnss_local_time_diff;
+extern bool next_pulse_time_valid, update_gnss;
+extern bool time_diff_valid, is_first_gnss;
+extern double latest_gnss_time, next_pulse_time; 
+extern double time_diff_gnss_local;
+extern bool gnss_local_online_sync, nolidar; 
+extern double li_init_gyr_cov, li_init_acc_cov, lidar_time_inte, first_imu_time;
+extern int cut_frame_num, orig_odom_freq;
+extern double online_refine_time; //unit: s
+extern bool cut_frame_init;
+extern bool GNSS_ENABLE;
 
 void readParameters(ros::NodeHandle &n);
+void set_gnss_offline_init(bool nolidar_);
+void cout_state_to_file();

@@ -9,8 +9,68 @@
 #include <nav_msgs/Odometry.h>
 #include <tf/transform_broadcaster.h>
 #include <eigen_conversions/eigen_msg.h>
+#include <color.h>
+#include <../include/IKFoM/IKFoM_toolkit/esekfom/esekfom.hpp>
+
 using namespace std;
 using namespace Eigen;
+
+
+typedef MTK::vect<3, double> vect3;
+typedef MTK::SO3<double> SO3;
+typedef MTK::S2<double, 98090, 10000, 1> S2; 
+typedef MTK::vect<1, double> vect1;
+typedef MTK::vect<2, double> vect2;
+
+MTK_BUILD_MANIFOLD(state_input,
+((vect3, pos))
+((SO3, rot))
+// ((SO3, offset_R_L_I))
+// ((vect3, offset_T_L_I))
+((vect3, vel))
+((vect3, bg))
+((vect3, ba))
+((vect3, gravity))
+);
+
+MTK_BUILD_MANIFOLD(state_output,
+((vect3, pos))
+((SO3, rot))
+// ((SO3, offset_R_L_I))
+// ((vect3, offset_T_L_I))
+((vect3, vel))
+((vect3, omg))
+((vect3, acc))
+((vect3, gravity))
+((vect3, bg))
+((vect3, ba))
+);
+
+MTK_BUILD_MANIFOLD(input_ikfom,
+((vect3, acc))
+((vect3, gyro))
+);
+
+MTK_BUILD_MANIFOLD(process_noise_input,
+((vect3, ng))
+((vect3, na))
+((vect3, nbg))
+((vect3, nba))
+);
+
+MTK_BUILD_MANIFOLD(process_noise_output,
+((vect3, vel))
+((vect3, ng))
+((vect3, na))
+((vect3, nbg))
+((vect3, nba))
+);
+
+extern esekfom::esekf<state_input, 18, input_ikfom> kf_input;
+extern esekfom::esekf<state_output, 24, input_ikfom> kf_output;
+
+#define PBWIDTH 30
+#define PBSTR "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
 
 #define PI_M (3.14159265358)
 #define G_m_s2 (9.81)         // Gravaty const in GuangDong/China

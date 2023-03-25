@@ -81,7 +81,7 @@ Eigen::Matrix<T, 3, 3> Exp(const T &v1, const T &v2, const T &v3)
 
 /* Logrithm of a Rotation Matrix */
 template<typename T>
-Eigen::Matrix<T,3,1> Log(const Eigen::Matrix<T, 3, 3> &R)
+Eigen::Matrix<T,3,1> Log(const Eigen::Matrix<T, 3, 3> R)
 {
     T theta = (R.trace() > 3.0 - 1e-6) ? 0.0 : std::acos(0.5 * (R.trace() - 1));
     Eigen::Matrix<T,3,1> K(R(2,1) - R(1,2), R(0,2) - R(2,0), R(1,0) - R(0,1));
@@ -108,6 +108,21 @@ Eigen::Matrix<T, 3, 1> RotMtoEuler(const Eigen::Matrix<T, 3, 3> &rot)
     }
     Eigen::Matrix<T, 3, 1> ang(x, y, z);
     return ang;
+}
+
+template<typename T>
+Eigen::Matrix3d Jacob_right_inv(Eigen::Vector3d &vec){
+    Eigen::Matrix3d hat_v, res;
+    hat_v << SKEW_SYM_MATRX(vec);
+    if(vec.norm() > 1e-6)
+    {
+        res = Eigen::Matrix<double, 3, 3>::Identity() + 0.5 * hat_v + (1 - vec.norm() * std::cos(vec.norm() / 2) / 2 / std::sin(vec.norm() / 2)) * hat_v * hat_v / vec.squaredNorm();
+    }
+    else
+    {
+        res = Eigen::Matrix<double, 3, 3>::Identity();
+    }
+    return res;
 }
 
 #endif
