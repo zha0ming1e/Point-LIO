@@ -10,7 +10,7 @@
 #include <tf/transform_datatypes.h>
 #include <tf/transform_broadcaster.h>
 #include "li_initialization.h"
-#include "Estimator.h"
+// #include "Estimator.h"
 #include <malloc.h>
 // #include <cv_bridge/cv_bridge.h>
 #include <opencv2/opencv.hpp>
@@ -812,7 +812,7 @@ int main(int argc, char** argv)
                 bool imu_upda_cov = false;
                 effct_feat_num = 0;
                 /**** point by point update ****/
-                if (time_seq.size() > 0)
+                if (time_seq.size() > 0 || !GNSS_ENABLE)
                 {
                 double pcl_beg_time = Measures.lidar_beg_time;
                 idx = -1;
@@ -828,10 +828,10 @@ int main(int argc, char** argv)
                         {
                             while (time_current > imu_next.header.stamp.toSec())
                             {
+                                imu_deque.pop_front();
+                                if (imu_deque.empty()) break;
                                 imu_last = imu_next;
                                 imu_next = *(imu_deque.front());
-                                imu_deque.pop_front();
-                                // imu_deque.pop();
                             }
 
                             angvel_avr<<imu_last.angular_velocity.x, imu_last.angular_velocity.y, imu_last.angular_velocity.z;
@@ -848,8 +848,25 @@ int main(int argc, char** argv)
                         time_update_last = time_current;
                         time_predict_last_const = time_current;
                     }
-                    if(imu_en)
+                    if(imu_en && !imu_deque.empty())
                     {
+                        bool last_imu = imu_next.header.stamp.toSec() == imu_deque.front()->header.stamp.toSec();
+                        while (imu_next.header.stamp.toSec() < time_predict_last_const && !imu_deque.empty())
+                        {
+                            if (!last_imu)
+                            {
+                                imu_last = imu_next;
+                                imu_next = *(imu_deque.front());
+                                break;
+                            }
+                            else
+                            {
+                                imu_deque.pop_front();
+                                if (imu_deque.empty()) break;
+                                imu_last = imu_next;
+                                imu_next = *(imu_deque.front());
+                            }
+                        }
                         bool imu_comes = time_current > imu_next.header.stamp.toSec();
                         while (imu_comes) 
                         {
@@ -940,13 +957,9 @@ int main(int argc, char** argv)
                             acc_avr   <<imu_next.linear_acceleration.x, imu_next.linear_acceleration.y, imu_next.linear_acceleration.z;
 
                             /*** covariance update ***/
-                            imu_last = imu_next;
-                            imu_next = *(imu_deque.front());
-                            imu_deque.pop_front();
-                            double dt = imu_last.header.stamp.toSec() - time_predict_last_const;
+                            double dt = imu_next.header.stamp.toSec() - time_predict_last_const;
                             kf_output.predict(dt, Q_output, input_in, true, false);
-                            time_predict_last_const = imu_last.header.stamp.toSec(); // big problem
-                            imu_comes = time_current > imu_next.header.stamp.toSec();
+                            time_predict_last_const = imu_next.header.stamp.toSec(); // big problem
                             // if (!imu_comes)
                             if (GNSS_ENABLE)
                             {
@@ -954,11 +967,11 @@ int main(int argc, char** argv)
                                 p_gnss->processIMUOutput(dt, kf_output.x_.acc, kf_output.x_.omg);
                             }
                             {
-                                double dt_cov = imu_last.header.stamp.toSec() - time_update_last; 
+                                double dt_cov = imu_next.header.stamp.toSec() - time_update_last; 
 
                                 if (dt_cov > 0.0)
                                 {
-                                    time_update_last = imu_last.header.stamp.toSec();
+                                    time_update_last = imu_next.header.stamp.toSec();
                                     double propag_imu_start = omp_get_wtime();
 
                                     kf_output.predict(dt_cov, Q_output, input_in, false, true);
@@ -969,6 +982,11 @@ int main(int argc, char** argv)
                                     solve_time += omp_get_wtime() - solve_imu_start;
                                 }
                             }
+                            imu_deque.pop_front();
+                            if (imu_deque.empty()) break;
+                            imu_last = imu_next;
+                            imu_next = *(imu_deque.front());
+                            imu_comes = time_current > imu_next.header.stamp.toSec();
                         }
                     }
                     if (flg_reset)
@@ -1059,7 +1077,6 @@ int main(int argc, char** argv)
                     {
                         break;
                     }
-
                     double dt = time_current - time_predict_last_const;
                     double propag_state_start = omp_get_wtime();
                     if(!prop_at_freq_of_imu)
@@ -1084,7 +1101,6 @@ int main(int argc, char** argv)
                     //     fout_imu_pbp << Measures.lidar_last_time - first_lidar_time << " " << imu_last.angular_velocity.x << " " << imu_last.angular_velocity.y << " " << imu_last.angular_velocity.z \
                     //             << " " << imu_last.linear_acceleration.x << " " << imu_last.linear_acceleration.y << " " << imu_last.linear_acceleration.z << endl;
                     // }
-
                     double t_update_start = omp_get_wtime();
 
                     if (feats_down_size < 1)
@@ -1111,7 +1127,6 @@ int main(int argc, char** argv)
                     //         propag_time += omp_get_wtime() - propag_cov_start;
                     //     }
                     // }
-
                     solve_start = omp_get_wtime();
                         
                     if (publish_odometry_without_downsample)
@@ -1369,7 +1384,7 @@ int main(int argc, char** argv)
             {
                 bool imu_prop_cov = false;
                 effct_feat_num = 0;
-                if (time_seq.size() > 0)
+                if (time_seq.size() > 0 || !GNSS_ENABLE)
                 {
                 double pcl_beg_time = Measures.lidar_beg_time;
                 idx = -1;
@@ -1381,9 +1396,10 @@ int main(int argc, char** argv)
                     {
                         while (time_current > imu_next.header.stamp.toSec()) 
                         {
+                            imu_deque.pop_front();
+                            if (imu_deque.empty()) break;
                             imu_last = imu_next;
                             imu_next = *(imu_deque.front());
-                            imu_deque.pop_front();
                         }
                         imu_prop_cov = true;
 
@@ -1403,6 +1419,7 @@ int main(int argc, char** argv)
                     
                     while (time_current > imu_next.header.stamp.toSec()) // && !imu_deque.empty())
                     {
+                        imu_deque.pop_front();
                         if (!p_gnss->gnss_msg.empty())
                         {
                             gnss_cur = p_gnss->gnss_msg.front();
@@ -1484,9 +1501,7 @@ int main(int argc, char** argv)
                         {
                             break;
                         }
-                        imu_last = imu_next;
-                        imu_next = *(imu_deque.front());
-                        imu_deque.pop_front();
+                        
                         input_in.gyro<<imu_last.angular_velocity.x, imu_last.angular_velocity.y, imu_last.angular_velocity.z;
                         input_in.acc <<imu_last.linear_acceleration.x, imu_last.linear_acceleration.y, imu_last.linear_acceleration.z; 
                         input_in.acc    = input_in.acc * G_m_s2 / acc_norm; 
@@ -1506,6 +1521,10 @@ int main(int argc, char** argv)
                         kf_input.predict(dt, Q_input, input_in, true, false); 
                         t_last = imu_last.header.stamp.toSec();
                         imu_prop_cov = true;
+
+                        if (imu_deque.empty()) break;
+                        imu_last = imu_next;
+                        imu_next = *(imu_deque.front());
                         // imu_upda_cov = true;
                     }     
                     if (flg_reset)

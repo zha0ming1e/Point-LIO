@@ -110,7 +110,7 @@ class GNSSProcess
   gtsam::ISAM2 isam;
   bool gnss_online_init; // no use
   bool invalid_lidar = false;
-
+  
   // size_t index_delete = 0; // 
   // size_t E_num = 0; // 
   std::deque<std::vector<size_t>> factor_id_frame; // 

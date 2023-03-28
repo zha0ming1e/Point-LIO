@@ -19,9 +19,9 @@ mapping:
     imu_en: true
     extrinsic_est_en: false # for aggressive motion, set this variable false
     imu_time_inte: 0.005 # = 1 / frequency of IMU
-    satu_acc: 3.0 # the saturation value of IMU's acceleration. not related to the units
+    satu_acc: 30.0 # the saturation value of IMU's acceleration. not related to the units
     satu_gyro: 35 # the saturation value of IMU's angular velocity. not related to the units
-    acc_norm: 1.0 # 1.0 for g as unit, 9.81 for m/s^2 as unit of the IMU's acceleration
+    acc_norm: 9.81 # 1.0 for g as unit, 9.81 for m/s^2 as unit of the IMU's acceleration
     lidar_meas_cov: 0.01 # 0.001; 0.01
     acc_cov_output: 500
     gyr_cov_output: 1000 
@@ -45,11 +45,11 @@ mapping:
                 #    0.0, 0.0, -1.0 ] # fg
 
 gnss:
-    gnss_enable: true
+    gnss_enable: false
     nolidar: false
     quick_init: false
     online_init: true # false is wei ming ti, maybe can work when this value is false now: yes
-    ephem_from_rinex: true
+    ephem_from_rinex: false
     outlier_rejection: true # for offline initial and no lidar or broaden the outlier rejection threshold // can be modified as well
     psr_dopp_weight: 1 # 
     cp_weight: 1 # 
@@ -69,7 +69,7 @@ gnss:
     gnss_track_num_thres: 20            # number of satellite tracking epochs before entering estimator
     gtsam_variable_thres: 200            # is it important that delete factor one frame by one frame?
     gtsam_marg_variable_thres: 1
-    gnss_sample_period: 0.2
+    gnss_sample_period: 0.1
     outlier_thres: 0.1
     window_size: 1 # <= 10
     prior_noise: 0.1 #
@@ -86,9 +86,9 @@ gnss:
     gnss_ekf_noise: 0.01
     gnss_local_online_sync: false                       # if perform online synchronization betwen GNSS and local time
     local_trigger_info_topic: "/external_trigger"   # external trigger info of the local sensor, if `gnss_local_online_sync` is 1
-    gnss_local_time_diff: 9.062 # 18.0 # should be 27.062?   # difference between GNSS and local time (s), if `gnss_local_online_sync` is 0
+    gnss_local_time_diff: 18.0 # should be 27.062? 9.062 #  # difference between GNSS and local time (s), if `gnss_local_online_sync` is 0
     gnss_iono_default_parameters: [0.1118E-07,  0.2235E-07, -0.4172E-06,  0.6557E-06, 0.1249E+06, -0.4424E+06,  0.1507E+07, -0.2621E+06]
-    gnss_extrinsic_T: [-0.5172, 0.0435, -0.0911] # fg # [0.0, -0.15, 0.3] # [-0.005, -0.1, 0.10] # gvins # [-0.39765, 0.13204, 0.0284] # m300 # 
+    gnss_extrinsic_T: [-0.39765, 0.13204, 0.0284] # m300 # [-0.5172, 0.0435, -0.0911] # fg # [0.0, -0.15, 0.3] # [-0.005, -0.1, 0.10] # gvins # 
     # [-0.0759472920952561, -0.0039320527565750, -0.0016395029500217] # [-0.516857, 0.092900, 0.043450] # 
     # offline_init_vec: [3959150, -87734.7, 4983270, 0.82415, 128.4, 560234, 560243, 560235, 560241] # 5644xx the value of the clock drift is very important!
     # offline_init_vec: [3959140, -87732.6, 4983260, 0.82415, 128.4, 561384, 561393, 561385, 561391] # anc, yaw, ddt, dt 5644xx

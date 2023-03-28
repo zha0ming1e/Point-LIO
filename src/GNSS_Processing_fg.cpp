@@ -119,32 +119,6 @@ void GNSSProcess::inputlla(double ts, double lat, double lon, double alt) //
   lla_holder.push_back(xyz_enu);
 }
 
-Eigen::Vector3d GNSSProcess::local2enu(state_input &state)
-{
-  Eigen::Vector3d enu_pos;
-  if (!nolidar)
-  {
-    Eigen::Vector3d anc_cur = isamCurrentEstimate.at<gtsam::Vector3>(E(0));
-    Eigen::Matrix3d R_enu_local_ = isamCurrentEstimate.at<gtsam::Rot3>(P(0)).matrix();
-
-    enu_pos = R_enu_local_ * (state.rot.toRotationMatrix() * Tex_imu_r + state.pos - anc_local); // 
-
-    // Eigen::Matrix3d R_ecef_enu_ = ecef2rotation(anc_cur);
-    // Eigen::Vector3d ecef_pos_ = anc_cur + R_ecef_enu_ * enu_pos;
-    Eigen::Vector3d ecef_pos_ = anc_cur + enu_pos;
-    // Eigen::Vector3d lla_pos = ecef2geo(first_xyz_enu_pvt);
-    enu_pos = ecef2enu(first_lla_pvt, ecef_pos_ - first_xyz_ecef_pvt);
-  }
-  else
-  {
-    Eigen::Vector3d pos_r = state.rot.toRotationMatrix() * Tex_imu_r + state.pos;
-    // Eigen::Vector3d lla_pos = ecef2geo(first_xyz_enu_pvt);
-    enu_pos = ecef2enu(first_lla_pvt, pos_r - first_xyz_ecef_pvt);
-  }
-
-  return enu_pos;
-}
-
 Eigen::Vector3d GNSSProcess::local2enu(Eigen::Matrix3d R_enu_local_, Eigen::Vector3d anc, Eigen::Vector3d &pos)
 {
   Eigen::Vector3d enu_pos;

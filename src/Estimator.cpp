@@ -337,12 +337,12 @@ void h_model_IMU_output(state_output &s, esekfom::dyn_share_modified<double> &ek
 void h_model_GNSS_input(state_input &s, esekfom::dyn_share_modified<double> &ekfom_data)
 {
 	Eigen::Vector3d res_r;
-	p_gnss->state_const_.rot.boxminus(res_r, s.rot);
-	ekfom_data.z_GNSS.setIdentity();
-	ekfom_data.z_GNSS.block<3, 3>(3, 3) = Jacob_right_inv<double>(res_r);
+	p_gnss->state_.rot.boxminus(res_r, s.rot);
+	ekfom_data.h_GNSS.setIdentity();
+	ekfom_data.h_GNSS.block<3, 3>(3, 3) = Jacob_right_inv<double>(res_r);
 	ekfom_data.z_GNSS.block<3, 1>(3, 0) = res_r;
-	ekfom_data.z_GNSS.block<3, 1>(0, 0) = p_gnss->state_const_.pos - s.pos;
-	ekfom_data.z_GNSS.block<3, 1>(6, 0) = p_gnss->state_const_.vel - s.vel;
+	ekfom_data.z_GNSS.block<3, 1>(0, 0) = p_gnss->state_.pos - s.pos;
+	ekfom_data.z_GNSS.block<3, 1>(6, 0) = p_gnss->state_.vel - s.vel;
 	ekfom_data.M_Noise = gnss_ekf_noise;
 }
 
@@ -350,8 +350,8 @@ void h_model_GNSS_output(state_output &s, esekfom::dyn_share_modified<double> &e
 {
 	Eigen::Vector3d res_r;
 	p_gnss->state_const_.rot.boxminus(res_r, s.rot);
-	ekfom_data.z_GNSS.setIdentity();
-	ekfom_data.z_GNSS.block<3, 3>(3, 3) = Jacob_right_inv<double>(res_r);
+	ekfom_data.h_GNSS.setIdentity();
+	ekfom_data.h_GNSS.block<3, 3>(3, 3) = Jacob_right_inv<double>(res_r);
 	ekfom_data.z_GNSS.block<3, 1>(3, 0) = res_r;
 	ekfom_data.z_GNSS.block<3, 1>(0, 0) = p_gnss->state_const_.pos - s.pos;
 	ekfom_data.z_GNSS.block<3, 1>(6, 0) = p_gnss->state_const_.vel - s.vel;
