@@ -1,4 +1,4 @@
-#include "li_Initialization.h"
+#include "li_initialization.h"
 bool data_accum_finished = false, data_accum_start = false, online_calib_finish = false, refine_print = false;
 int frame_num_init = 0;
 double time_lag_IMU_wtr_lidar = 0.0, move_start_time = 0.0, online_calib_starts_time = 0.0; //, mean_acc_norm = 9.81;
@@ -10,7 +10,8 @@ V3D gravity_lio = V3D::Zero();
 mutex mtx_buffer;
 sensor_msgs::Imu imu_last, imu_next;
 // sensor_msgs::Imu::ConstPtr imu_last_ptr;
-M3D Rot_gnss_init(Eye3d);
+PointCloudXYZI::Ptr  ptr_con(new PointCloudXYZI());
+double T1[MAXN], s_plot[MAXN], s_plot2[MAXN], s_plot3[MAXN], s_plot11[MAXN];
 
 condition_variable sig_buffer;
 int scan_count = 0;
@@ -19,7 +20,7 @@ std::mutex m_time;
 bool lidar_pushed = false, imu_pushed = false;
 std::deque<PointCloudXYZI::Ptr>  lidar_buffer;
 std::deque<double>               time_buffer;
-std::deque<sensor_msgs::Imu::ConstPtr> imu_deque;
+std::deque<sensor_msgs::Imu::Ptr> imu_deque;
 std::queue<std::vector<ObsPtr>> gnss_meas_buf;
 
 void gnss_ephem_callback(const GnssEphemMsgConstPtr &ephem_msg)
@@ -71,7 +72,7 @@ void gnss_meas_callback(const GnssMeasMsgConstPtr &meas_msg)
     sig_buffer.notify_all(); // notify_one()?
 }
 
-void local_trigger_info_callback(const glio::LocalSensorExternalTriggerConstPtr &trigger_msg) // pps time sync
+void local_trigger_info_callback(const ligo::LocalSensorExternalTriggerConstPtr &trigger_msg) // pps time sync
 {
     std::lock_guard<std::mutex> lg(m_time);
 
@@ -847,8 +848,8 @@ void LI_Init_set()
     Lidar_T_wrt_IMU = Init_LI->get_T_LI();
     if (use_imu_as_input)
     {
-        kf_input.x_.pos = -p_imu->state_LI_Init.rot * Lidar_R_wrt_IMU.transpose() * Lidar_T_wrt_IMU +
-                        p_imu->state_LI_Init.pos; //Body frame is IMU frame in Point-LIO mode
+        kf_input.x_.pos = -(p_imu->state_LI_Init.rot.toRotationMatrix() * Lidar_R_wrt_IMU.transpose() * Lidar_T_wrt_IMU +
+                        p_imu->state_LI_Init.pos); //Body frame is IMU frame in Point-LIO mode
         kf_input.x_.rot = p_imu->state_LI_Init.rot * Lidar_R_wrt_IMU.transpose();
         gravity_lio = Init_LI->get_Grav_L0();
         kf_input.x_.gravity = Init_LI->get_Grav_L0();
@@ -857,14 +858,14 @@ void LI_Init_set()
     }
     else
     {
-        kf_output.x_.pos = -p_imu->state_LI_Init.rot * Lidar_R_wrt_IMU.transpose() * Lidar_T_wrt_IMU +
-                        p_imu->state_LI_Init.pos; //Body frame is IMU frame in Point-LIO mode
+        kf_output.x_.pos = -1 * (p_imu->state_LI_Init.rot.toRotationMatrix() * Lidar_R_wrt_IMU.transpose() * Lidar_T_wrt_IMU +
+                        p_imu->state_LI_Init.pos); //Body frame is IMU frame in Point-LIO mode
         kf_output.x_.rot = p_imu->state_LI_Init.rot * Lidar_R_wrt_IMU.transpose();
         gravity_lio = Init_LI->get_Grav_L0();
         kf_output.x_.gravity = Init_LI->get_Grav_L0();
         kf_output.x_.bg = Init_LI->get_gyro_bias();
         kf_output.x_.ba = Init_LI->get_acc_bias();
-        kf_output.x_.acc = - kf_output.x_.rot.transpose() * gravity_lio;
+        kf_output.x_.acc = - kf_output.x_.rot.toRotationMatrix().transpose() * gravity_lio;
     }
     {
         // init_map = true;
@@ -873,7 +874,7 @@ void LI_Init_set()
     }
     if (GNSS_ENABLE)
     {
-        p_imu->Set_init(gravity_lio, Rot_gnss_init);
+        p_imu->Set_init(Rot_gnss_init); // gravity_lio, 
         p_gnss->Rot_gnss_init = Rot_gnss_init;
         cout << "check Rot init:" << Rot_gnss_init << endl;
         // delete ikdtree.Root_Node;

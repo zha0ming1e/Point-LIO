@@ -349,25 +349,25 @@ public:
 			Matrix<double, n, 9> PHT;
 			Matrix<double, n, 9> K;
 			Matrix<double, 9, 9> HPHT;
-			Matrix<double, n, n> KH;
+			Matrix<double, n, 9> KH;
 			
 			{
-				PHT = P_.block<n, 9>(0, 0) * Hsub_T;
-				HPHT = dyn_share.h_GNSS * PHT;
+				PHT = P_.template block<n, 9>(0, 0) * Hsub_T;
+				HPHT = dyn_share.h_GNSS * PHT.template block<9, 9>(0, 0);
 				for (int m_ = 0; m_ < 9; m_++)
 				{
-					HPHT(m_,m_) += dyn_share.M_noise;
+					HPHT(m_,m_) += dyn_share.M_Noise;
 				}
 				K = PHT * HPHT.inverse();
 				KH = K * dyn_share.h_GNSS;
 			}
-		}
 			
                                     
             Matrix<scalar_type, n, 1> dx_ = K * dyn_share.z_GNSS;
 
-            P_ -= KH * P_;
+            P_ -= KH * P_.template block<9, n>(0, 0);
 			x_.boxplus(dx_);
+		}
 		
 		return;
 	}
@@ -396,10 +396,10 @@ public:
 	const cov& get_P() const {
 		return P_;
 	}
+	cov P_;
 	state x_;
 private:
 	measurement m_;
-	cov P_;
 	spMt l_;
 	spMt f_x_1;
 	spMt f_x_2;

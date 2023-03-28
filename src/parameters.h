@@ -6,8 +6,8 @@
 #include <Eigen/Core>
 #include <cstring>
 #include "preprocess.h"
-#include "GNSS_Processing_fg.hpp"
-#include "IMU_Processing.hpp"
+#include "GNSS_Processing_fg.h"
+#include "IMU_Processing.h"
 #include "LI_init/LI_init.h"
 #include <sensor_msgs/NavSatFix.h>
 #include <livox_ros_driver/CustomMsg.h>
@@ -30,6 +30,8 @@ extern double lidar_end_time, first_lidar_time, time_con;
 extern double last_timestamp_lidar, last_timestamp_imu;
 extern int pcd_index;
 
+extern state_input state_in;
+extern state_output state_out;
 extern std::string lid_topic, imu_topic;
 extern bool prop_at_freq_of_imu, check_satu, con_frame, cut_frame;
 extern bool use_imu_as_input, space_down_sample;
@@ -56,12 +58,13 @@ extern shared_ptr<Preprocess> p_pre;
 extern shared_ptr<LI_Init> Init_LI;
 extern shared_ptr<ImuProcess> p_imu;
 extern shared_ptr<GNSSProcess> p_gnss;
+extern bool is_first_frame;
 
 extern double time_diff_lidar_to_imu;
 extern std::string gnss_ephem_topic, gnss_glo_ephem_topic, gnss_meas_topic, gnss_iono_params_topic;
 extern std::string gnss_tp_info_topic, local_trigger_info_topic, rtk_pvt_topic, rtk_lla_topic;
 extern std::vector<double> default_gnss_iono_params;
-extern double gnss_local_time_diff;
+extern double gnss_local_time_diff, gnss_ekf_noise;
 extern bool next_pulse_time_valid, update_gnss;
 extern bool time_diff_valid, is_first_gnss;
 extern double latest_gnss_time, next_pulse_time; 
@@ -73,7 +76,13 @@ extern double online_refine_time; //unit: s
 extern bool cut_frame_init;
 extern bool GNSS_ENABLE;
 extern double time_update_last, time_current, time_predict_last_const, t_last;
+extern Eigen::Matrix3d Rot_gnss_init;
 
+extern MeasureGroup Measures;
+
+extern ofstream fout_out, fout_imu_pbp;
 void readParameters(ros::NodeHandle &n);
+void open_file();
+vect3 SO3ToEuler(const SO3 &orient);
 void set_gnss_offline_init(bool nolidar_);
 void cout_state_to_file();

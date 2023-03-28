@@ -16,8 +16,6 @@ int k;
 int idx;
 esekfom::esekf<state_input, 18, input_ikfom> kf_input;
 esekfom::esekf<state_output, 24, input_ikfom> kf_output;
-state_input state_in;
-state_output state_out;
 input_ikfom input_in;
 V3D angvel_avr, acc_avr, acc_avr_norm;
 int feats_down_size = 0;  
@@ -114,41 +112,6 @@ Eigen::Matrix<double, 24, 24> df_dx_output(state_output &s, const input_ikfom &i
 	// cov.template block<3, 3>(6, 15) = Eigen::Matrix3d::Identity(); // grav_matrix; 
 	cov.template block<3, 3>(3, 9) = Eigen::Matrix3d::Identity(); 
 	return cov;
-}
-
-vect3 SO3ToEuler(const SO3 &orient) 
-{
-	Eigen::Matrix<double, 3, 1> _ang;
-	Eigen::Vector4d q_data = orient.coeffs().transpose();
-	//scalar w=orient.coeffs[3], x=orient.coeffs[0], y=orient.coeffs[1], z=orient.coeffs[2];
-	double sqw = q_data[3]*q_data[3];
-	double sqx = q_data[0]*q_data[0];
-	double sqy = q_data[1]*q_data[1];
-	double sqz = q_data[2]*q_data[2];
-	double unit = sqx + sqy + sqz + sqw; // if normalized is one, otherwise is correction factor
-	double test = q_data[3]*q_data[1] - q_data[2]*q_data[0];
-
-	if (test > 0.49999*unit) { // singularity at north pole
-	
-		_ang << 2 * std::atan2(q_data[0], q_data[3]), M_PI/2, 0;
-		double temp[3] = {_ang[0] * 57.3, _ang[1] * 57.3, _ang[2] * 57.3};
-		vect3 euler_ang(temp, 3);
-		return euler_ang;
-	}
-	if (test < -0.49999*unit) { // singularity at south pole
-		_ang << -2 * std::atan2(q_data[0], q_data[3]), -M_PI/2, 0;
-		double temp[3] = {_ang[0] * 57.3, _ang[1] * 57.3, _ang[2] * 57.3};
-		vect3 euler_ang(temp, 3);
-		return euler_ang;
-	}
-		
-	_ang <<
-			std::atan2(2*q_data[0]*q_data[3]+2*q_data[1]*q_data[2] , -sqx - sqy + sqz + sqw),
-			std::asin (2*test/unit),
-			std::atan2(2*q_data[2]*q_data[3]+2*q_data[1]*q_data[0] , sqx - sqy - sqz + sqw);
-	double temp[3] = {_ang[0] * 57.3, _ang[1] * 57.3, _ang[2] * 57.3};
-	vect3 euler_ang(temp, 3);
-	return euler_ang;
 }
 
 void h_model_input(state_input &s, esekfom::dyn_share_modified<double> &ekfom_data)
@@ -380,7 +343,7 @@ void h_model_GNSS_input(state_input &s, esekfom::dyn_share_modified<double> &ekf
 	ekfom_data.z_GNSS.block<3, 1>(3, 0) = res_r;
 	ekfom_data.z_GNSS.block<3, 1>(0, 0) = p_gnss->state_const_.pos - s.pos;
 	ekfom_data.z_GNSS.block<3, 1>(6, 0) = p_gnss->state_const_.vel - s.vel;
-	ekfom_data.M_noise = grav_cov_init;
+	ekfom_data.M_Noise = gnss_ekf_noise;
 }
 
 void h_model_GNSS_output(state_output &s, esekfom::dyn_share_modified<double> &ekfom_data)
@@ -392,7 +355,7 @@ void h_model_GNSS_output(state_output &s, esekfom::dyn_share_modified<double> &e
 	ekfom_data.z_GNSS.block<3, 1>(3, 0) = res_r;
 	ekfom_data.z_GNSS.block<3, 1>(0, 0) = p_gnss->state_const_.pos - s.pos;
 	ekfom_data.z_GNSS.block<3, 1>(6, 0) = p_gnss->state_const_.vel - s.vel;
-	ekfom_data.M_noise = grav_cov_init;
+	ekfom_data.M_Noise = gnss_ekf_noise;
 }
 
 void pointBodyToWorld(PointType const * const pi, PointType * const po)
@@ -428,8 +391,6 @@ void pointBodyToWorld(PointType const * const pi, PointType * const po)
     po->z = p_global(2);
     po->intensity = pi->intensity;
 }
-
-const bool time_list(PointType &x, PointType &y) {return (x.curvature < y.curvature);};
 
 void LI_Init_update()
 {
@@ -519,7 +480,7 @@ void LI_Init_update()
 
 				/*** calculate the Measurement Jacobian matrix H ***/
 			
-				V3D G(point_crossmat * p_imu->state_LI_Init.rot.transpose() * norm_vec);
+				V3D G(point_crossmat * p_imu->state_LI_Init.rot.toRotationMatrix().transpose() * norm_vec);
 				Hsub.row(m_) << VEC_FROM_ARRAY(G), norm_p.x, norm_p.y, norm_p.z; //, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0;                    
 				Hsub_T_R_inv.col(m_) = Hsub.row(m_).transpose() * 100;
 				/*** Measurement: distance to the closest surface/corner ***/
@@ -542,7 +503,7 @@ void LI_Init_update()
 		MD(12, 12) &&K_1 = (H_T_H + p_imu->state_cov.inverse()).inverse();
 		K = K_1.block<12, 6>(0, 0) * Hsub_T_R_inv;
 		Eigen::Matrix<double, 12, 1> vec;
-		vec.block<3,1>(3,0) = Log(p_imu->state_LI_Init.rot.transpose() * state_propagat.rot);
+		vec.block<3,1>(3,0) = Log(p_imu->state_LI_Init.rot.toRotationMatrix().transpose() * state_propagat.rot);
 		vec.block<3,1>(0,0) = state_propagat.pos - p_imu->state_LI_Init.pos;
 		vec.block<3,1>(6,0) = state_propagat.vel - p_imu->state_LI_Init.vel;
 		vec.block<3,1>(9,0) = state_propagat.bg - p_imu->state_LI_Init.bg;

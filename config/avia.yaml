@@ -27,7 +27,6 @@ mapping:
     gyr_cov_output: 1000 
     b_acc_cov: 0.0001 
     b_gyr_cov: 0.0001 
-    grav_cov_init:  0.00010
     imu_meas_acc_cov: 0.1 #0.1 # 0.1
     imu_meas_omg_cov: 0.1 #0.01 # 0.1
     gyr_cov_input: 0.01 # for IMU as input model
@@ -84,6 +83,7 @@ gnss:
     odo_noise: 0.1
     psr_dopp_noise: 0.1
     cp_noise: 0.001
+    gnss_ekf_noise: 0.01
     gnss_local_online_sync: false                       # if perform online synchronization betwen GNSS and local time
     local_trigger_info_topic: "/external_trigger"   # external trigger info of the local sensor, if `gnss_local_online_sync` is 1
     gnss_local_time_diff: 9.062 # 18.0 # should be 27.062?   # difference between GNSS and local time (s), if `gnss_local_online_sync` is 0

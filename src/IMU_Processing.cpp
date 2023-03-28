@@ -1,65 +1,6 @@
-#include <cmath>
-#include <math.h>
-// #include <deque>
-// #include <mutex>
-// #include <thread>
-#include <csignal>
-#include <ros/ros.h>
-#include <so3_math.h>
-#include <Eigen/Eigen>
-#include "Estimator.h"
-#include <common_lib.h>
-#include <pcl/common/io.h>
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
-#include <nav_msgs/Odometry.h>
-#include <pcl/kdtree/kdtree_flann.h>
-#include <tf/transform_broadcaster.h>
-#include <eigen_conversions/eigen_msg.h>
-#include <pcl_conversions/pcl_conversions.h>
-#include <sensor_msgs/PointCloud2.h>
+#include "IMU_Processing.h"
 
-/// *************Preconfiguration
-
-#define MAX_INI_COUNT (100)
-
-/// *************IMU Process and undistortion
-class ImuProcess
-{
- public:
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-
-  ImuProcess();
-  ~ImuProcess();
-  
-  void Reset();
-  void Process(const MeasureGroup &meas, PointCloudXYZI::Ptr pcl_un_);
-  void set_gyr_cov(const V3D &scaler);
-  void set_acc_cov(const V3D &scaler);
-  void Set_init(Eigen::Matrix3d &rot);
-  void pointBodyToWorld_li_init(PointType const * const pi, PointType * const po);
-
-  state_input state_LI_Init;
-  MD(12, 12) state_cov = MD(12, 12)::Identity();
-  int    lidar_type;
-  V3D    gravity_;
-  bool   imu_en;
-  V3D    mean_acc;
-  bool   imu_need_init_ = true;
-  bool   after_imu_init_ = false;
-  bool   b_first_frame_ = true;
-  bool   LI_init_done = true;
-  bool   UseLIInit;
-  double time_last_scan = 0.0;
-  V3D cov_gyr_scale = V3D(0.0001, 0.0001, 0.0001);
-  V3D cov_vel_scale = V3D(0.0001, 0.0001, 0.0001);
-
- private:
-  void IMU_init(const MeasureGroup &meas, int &N);
-  void Forward_propagation_without_imu(const MeasureGroup &meas, PointCloudXYZI &pcl_out);
-  V3D mean_gyr;
-  int init_iter_num = 1;
-};
+const bool time_list(PointType &x, PointType &y) {return (x.curvature < y.curvature);};
 
 void ImuProcess::pointBodyToWorld_li_init(PointType const * const pi, PointType * const po)
 {    
@@ -219,8 +160,9 @@ void ImuProcess::Forward_propagation_without_imu(const MeasureGroup &meas, Point
     /** Forward propagation of attitude **/
     state_LI_Init.rot.boxplus(dR); // = state_LI_Init.rot * Exp_f;
                                                                                                             
-    /** Position Propagation **/                 
-    state_LI_Init.pos.boxplus(state_LI_Init.vel * dt);                                                                                                   
+    /** Position Propagation **/   
+    V3D dp = state_LI_Init.vel * dt;              
+    state_LI_Init.pos.boxplus(dp);                                                                                                   
                  
     /**CV model： un-distort pcl using linear interpolation **/        
     auto it_pcl = pcl_out.points.end() - 1;
@@ -228,11 +170,11 @@ void ImuProcess::Forward_propagation_without_imu(const MeasureGroup &meas, Point
     for(; it_pcl != pcl_out.points.begin(); it_pcl --)
     {
       dt_j= pcl_end_offset_time - it_pcl->curvature/double(1000);
-      M3D R_jk(Exp(state_inout.bias_g, - dt_j));
+      M3D R_jk(Exp(state_LI_Init.bg, - dt_j));
       V3D P_j(it_pcl->x, it_pcl->y, it_pcl->z);
       // Using rotation and translation to un-distort points
       V3D p_jk;
-      p_jk = - state_LI_Init.rot.transpose() * state_LI_Init.vel * dt_j;
+      p_jk = - state_LI_Init.rot.toRotationMatrix().transpose() * state_LI_Init.vel * dt_j;
 
       V3D P_compensate =  R_jk * P_j + p_jk;
 

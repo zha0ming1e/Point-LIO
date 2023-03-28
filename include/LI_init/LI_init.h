@@ -6,7 +6,7 @@
 #include <fstream>
 #include <iostream>
 #include <csignal>
-#include <so3_math.h>
+// #include <so3_math.h>
 #include <Eigen/Eigen>
 #include <condition_variable>
 #include <eigen_conversions/eigen_msg.h>

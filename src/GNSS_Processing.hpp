@@ -6,7 +6,7 @@
 #include <Eigen/Dense>
 #include <gnss_comm/gnss_constant.hpp>
 #include <gnss_comm/gnss_ros.hpp>
-#include "GNSS_Initialization.hpp"
+#include "GNSS_Initialization.h"
 #include <common_lib_gnss.h>
 #include <numeric>
 
@@ -1159,21 +1159,21 @@ bool GNSSProcess::Evaluate(StatesGroupwithGNSS &state, Eigen::VectorXd &residual
   const std::vector<EphemBasePtr> &curr_ephem = gnss_ephem_buf[0];
 
   std::map<double, std::map<uint32_t, double[3]> >::iterator it;
-  double time_list[curr_obs.size()];
+  double time_list_[curr_obs.size()];
   double time_min = time2sec(curr_obs[0]->time);
   for (uint32_t j = 0; j < curr_obs.size(); ++j)
   {
-    time_list[j] = 0.0;
+    time_list_[j] = 0.0;
     for (it = sat2cp.begin(); it != sat2cp.end(); ++it)
     {
       std::map<uint32_t, double[3]>::iterator it_sat;
       it_sat = it->second.find(curr_obs[j]->sat);
       if (it_sat != it->second.end())
       {
-        time_list[j] = it->first;
-        if (time_list[j] < time_min)
+        time_list_[j] = it->first;
+        if (time_list_[j] < time_min)
         {
-          time_min = time_list[j];
+          time_min = time_list_[j];
         }
         break;
       }
@@ -1184,7 +1184,7 @@ bool GNSSProcess::Evaluate(StatesGroupwithGNSS &state, Eigen::VectorXd &residual
   double min_cp_std = 100000000;
   for (uint32_t j = 0; j < curr_obs.size(); ++j)
   {
-    if (time_list[j] == time_min)
+    if (time_list_[j] == time_min)
     {
       freq = L1_freq(curr_obs[j], &freq_idx);
       LOG_IF(FATAL, freq < 0) << "No L1 observation found."; 
@@ -1584,21 +1584,21 @@ bool GNSSProcess::Evaluate(StatesGroupwithGNSS2 &state, Eigen::VectorXd &residua
   const std::vector<EphemBasePtr> &curr_ephem = gnss_ephem_buf[0];
 
   std::map<double, std::map<uint32_t, double[3]> >::iterator it;
-  double time_list[curr_obs.size()];
+  double time_list_[curr_obs.size()];
   double time_min = time2sec(curr_obs[0]->time);
   for (uint32_t j = 0; j < curr_obs.size(); ++j)
   {
-    time_list[j] = 0.0;
+    time_list_[j] = 0.0;
     for (it = sat2cp.begin(); it != sat2cp.end(); ++it)
     {
       std::map<uint32_t, double[3]>::iterator it_sat;
       it_sat = it->second.find(curr_obs[j]->sat);
       if (it_sat != it->second.end())
       {
-        time_list[j] = it->first;
-        if (time_list[j] < time_min)
+        time_list_[j] = it->first;
+        if (time_list_[j] < time_min)
         {
-          time_min = time_list[j];
+          time_min = time_list_[j];
         }
         break;
       }
@@ -1609,7 +1609,7 @@ bool GNSSProcess::Evaluate(StatesGroupwithGNSS2 &state, Eigen::VectorXd &residua
   double min_cp_std = 100000000;
   for (uint32_t j = 0; j < curr_obs.size(); ++j)
   {
-    if (time_list[j] == time_min)
+    if (time_list_[j] == time_min)
     {
       freq = L1_freq(curr_obs[j], &freq_idx);
       LOG_IF(FATAL, freq < 0) << "No L1 observation found."; 
@@ -2012,21 +2012,21 @@ bool GNSSProcess::Evaluate(StatesGroupwithGNSS2 &state, Eigen::VectorXd &residua
 //   const std::vector<EphemBasePtr> &curr_cp_ephem = gnss_ephem_buf[1];
 
 //   std::map<double, std::map<uint32_t, double[2]> >::iterator it;
-//   double time_list[curr_cp_obs.size()];
+//   double time_list_[curr_cp_obs.size()];
 //   double time_min = time2sec(curr_cp_obs[0]->time);
 //   for (uint32_t j = 0; j < curr_cp_obs.size(); ++j)
 //   {
-//     time_list[j] = 0.0;
+//     time_list_[j] = 0.0;
 //     for (it = sat2cp.begin(); it != sat2cp.end(); ++it)
 //     {
 //       std::map<uint32_t, double[2]>::iterator it_sat;
 //       it_sat = it->second.find(curr_cp_obs[j]->sat);
 //       if (it_sat != it->second.end())
 //       {
-//         time_list[j] = it->first;
-//         if (time_list[j] < time_min)
+//         time_list_[j] = it->first;
+//         if (time_list_[j] < time_min)
 //         {
-//           time_min = time_list[j];
+//           time_min = time_list_[j];
 //         }
 //         break;
 //       }
@@ -2037,7 +2037,7 @@ bool GNSSProcess::Evaluate(StatesGroupwithGNSS2 &state, Eigen::VectorXd &residua
 //   double min_cp_std = 100000000;
 //   for (uint32_t j = 0; j < curr_cp_obs.size(); ++j)
 //   {
-//     if (time_list[j] == time_min)
+//     if (time_list_[j] == time_min)
 //     {
 //       freq = L1_freq(curr_cp_obs[j], &freq_idx);
 //       LOG_IF(FATAL, freq < 0) << "No L1 observation found."; 

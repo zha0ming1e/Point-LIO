@@ -52,7 +52,7 @@ class GnssLioFactorNolidar : public gtsam::NoiseModelFactor4<gtsam::Rot3, gtsam:
             Eigen::Vector3d dbg = pos_vel_bias1.segment<3>(9) - linearized_bg; // only bgi
             Eigen::Vector3d delta_r = dq_dbg * dbg;
             // double _dt_ = 1.0;
-            Eigen::Matrix3d corrected_delta_q = rel_rot.matrix() * Exp(delta_r);
+            Eigen::Matrix3d corrected_delta_q = rel_rot.matrix() * Exp<double>(delta_r);
             Eigen::Matrix3d res_R = corrected_delta_q.transpose() * d.matrix();
             Eigen::Vector3d res_r = gtsam::Rot3::Logmap(gtsam::Rot3(res_R));
         

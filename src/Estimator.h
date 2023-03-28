@@ -29,8 +29,6 @@ extern int feats_down_size;
 extern V3D Lidar_T_wrt_IMU; //(Zero3d);
 extern M3D Lidar_R_wrt_IMU; //(Eye3d);
 
-extern state_input state_in;
-extern state_output state_out;
 extern input_ikfom input_in;
 
 Eigen::Matrix<double, 18, 18> process_noise_cov_input();
@@ -51,8 +49,6 @@ Eigen::Matrix<double, 24, 24> df_dx_output(state_output &s, const input_ikfom &i
 
 // Eigen::Matrix<double, 30, 15> df_dw_output(state_output &s);
 
-vect3 SO3ToEuler(const SO3 &orient);
-
 void h_model_input(state_input &s, esekfom::dyn_share_modified<double> &ekfom_data);
 
 void h_model_output(state_output &s, esekfom::dyn_share_modified<double> &ekfom_data);
@@ -64,8 +60,6 @@ void h_model_GNSS_input(state_input &s, esekfom::dyn_share_modified<double> &ekf
 void h_model_GNSS_output(state_output &s, esekfom::dyn_share_modified<double> &ekfom_data);
 
 void pointBodyToWorld(PointType const * const pi, PointType * const po);
-
-const bool time_list(PointType &x, PointType &y); // {return (x.curvature < y.curvature);};
 
 void LI_Init_update();
 #endif

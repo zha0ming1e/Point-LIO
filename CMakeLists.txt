@@ -102,7 +102,8 @@ catkin_package(
 add_executable(ligo_mapping src/laserMapping.cpp 
                 include/ikd-Tree/ikd_Tree.cpp 
                 include/LI_init/LI_init.cpp
-                src/li_Initialization.cpp src/parameters.cpp src/preprocess.cpp src/Estimator.cpp)
+                src/li_initialization.cpp src/parameters.cpp src/preprocess.cpp src/Estimator.cpp 
+                src/IMU_Processing.cpp src/GNSS_Processing_fg.cpp src/GNSS_Initialization.cpp)
 target_link_libraries(ligo_mapping ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${CERES_LIBRARIES} ${OpenCV_LIBS} ${PYTHON_LIBRARIES} gtsam)
 target_link_libraries(ligo_mapping
 		dw

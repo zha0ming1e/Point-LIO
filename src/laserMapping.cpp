@@ -1,4 +1,4 @@
-#include <so3_math.h>
+// #include <so3_math.h>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
 #include <visualization_msgs/Marker.h>
@@ -9,17 +9,17 @@
 #include <pcl/io/pcd_io.h>
 #include <tf/transform_datatypes.h>
 #include <tf/transform_broadcaster.h>
-#include "li_Initialization.h"
+#include "li_initialization.h"
 #include "Estimator.h"
 #include <malloc.h>
-#include <cv_bridge/cv_bridge.h>
+// #include <cv_bridge/cv_bridge.h>
 #include <opencv2/opencv.hpp>
 #include "chi-square.h"
+// #include "matplotlibcpp.h"
 // #include "LI_init/LI_init.h"
 // #include <ros/console.h>
 
 
-#define MAXN                (720000)
 #define PUBFRAME_PERIOD     (20)
 
 const float MOV_THRESHOLD = 1.5f;
@@ -29,11 +29,9 @@ string root_dir = ROOT_DIR;
 int time_log_counter = 0, publish_count = 0;
 
 bool init_map = false, flg_first_scan = true;
-PointCloudXYZI::Ptr  ptr_con(new PointCloudXYZI());
 std::vector<ObsPtr> gnss_cur;
 
 // Time Log Variables
-double T1[MAXN], s_plot[MAXN], s_plot2[MAXN], s_plot3[MAXN], s_plot11[MAXN];
 double match_time = 0, solve_time = 0, propag_time = 0, update_time = 0;
 
 bool  flg_reset = false, flg_exit = false;
@@ -49,8 +47,6 @@ pcl::VoxelGrid<PointType> downSizeFilterSurf;
 pcl::VoxelGrid<PointType> downSizeFilterMap;
 
 V3D euler_cur;
-
-MeasureGroup Measures;
 
 nav_msgs::Path path;
 nav_msgs::Odometry odomAftMapped;
@@ -105,18 +101,18 @@ void pointBodyLidarToIMU(PointType const * const pi, PointType * const po)
 {
     V3D p_body_lidar(pi->x, pi->y, pi->z);
     V3D p_body_imu;
-    if (extrinsic_est_en)
-    {
-        if (!use_imu_as_input)
-        {
-            p_body_imu = kf_output.x_.offset_R_L_I * p_body_lidar + kf_output.x_.offset_T_L_I;
-        }
-        else
-        {
-            p_body_imu = kf_input.x_.offset_R_L_I * p_body_lidar + kf_input.x_.offset_T_L_I;
-        }
-    }
-    else
+    // if (extrinsic_est_en)
+    // {
+    //     if (!use_imu_as_input)
+    //     {
+    //         p_body_imu = kf_output.x_.offset_R_L_I * p_body_lidar + kf_output.x_.offset_T_L_I;
+    //     }
+    //     else
+    //     {
+    //         p_body_imu = kf_input.x_.offset_R_L_I * p_body_lidar + kf_input.x_.offset_T_L_I;
+    //     }
+    // }
+    // else
     {
         p_body_imu = Lidar_R_wrt_IMU * p_body_lidar + Lidar_T_wrt_IMU;
     }
@@ -200,7 +196,7 @@ void map_incremental()
         {
             if (p_imu->UseLIInit && !p_imu->LI_init_done)
             {
-                pointBodyToWorld_li_init(&(feats_down_body->points[i]), &(feats_down_world->points[i]));
+                p_imu->pointBodyToWorld_li_init(&(feats_down_body->points[i]), &(feats_down_world->points[i]));
             }
             /* No points found within the given threshold of nearest search*/
             if (Nearest_Points[i].empty()){
@@ -488,31 +484,24 @@ int main(int argc, char** argv)
 
     kf_input.init_dyn_share_modified_2h(get_f_input, df_dx_input, h_model_input, h_model_GNSS_input);
     kf_output.init_dyn_share_modified_3h(get_f_output, df_dx_output, h_model_output, h_model_IMU_output, h_model_GNSS_output);
-    Eigen::Matrix<double, 24, 24> P_init = MD(24,24)::Identity() * 0.01;
-    P_init.block<3, 3>(21, 21) = MD(3,3)::Identity() * 0.0001;
-    P_init.block<6, 6>(15, 15) = MD(6,6)::Identity() * 0.001;
-    P_init.block<6, 6>(6, 6) = MD(6,6)::Identity() * 0.0001;
+    Eigen::Matrix<double, 18, 18> P_init = MD(18, 18)::Identity() * 0.01;
+    P_init.block<3, 3>(15, 15) = MD(3,3)::Identity() * 0.0001;
+    P_init.block<6, 6>(9, 9) = MD(6,6)::Identity() * 0.001;
+    // P_init.block<6, 6>(6, 6) = MD(6,6)::Identity() * 0.0001;
     kf_input.change_P(P_init);
-    Eigen::Matrix<double, 30, 30> P_init_output = MD(30,30)::Identity() * 0.01;
-    P_init_output.block<3, 3>(21, 21) = MD(3,3)::Identity() * 0.0001;
-    P_init_output.block<6, 6>(6, 6) = MD(6,6)::Identity() * 0.0001;
-    P_init_output.block<6, 6>(24, 24) = MD(6,6)::Identity() * 0.001;
+    Eigen::Matrix<double, 24, 24> P_init_output = MD(24, 24)::Identity() * 0.01;
+    P_init_output.block<3, 3>(15, 15) = MD(3,3)::Identity() * 0.0001;
+    // P_init_output.block<6, 6>(6, 6) = MD(6,6)::Identity() * 0.0001;
+    P_init_output.block<6, 6>(18, 18) = MD(6,6)::Identity() * 0.001;
     kf_input.change_P(P_init);
     kf_output.change_P(P_init_output);
-    Eigen::Matrix<double, 24, 24> Q_input = process_noise_cov_input();
-    Eigen::Matrix<double, 30, 30> Q_output = process_noise_cov_output();
+    Eigen::Matrix<double, 18, 18> Q_input = process_noise_cov_input();
+    Eigen::Matrix<double, 24, 24> Q_output = process_noise_cov_output();
     /*** debug record ***/
     FILE *fp;
     string pos_log_dir = root_dir + "/Log/pos_log.txt";
     fp = fopen(pos_log_dir.c_str(),"w");
-
-    ofstream fout_out, fout_imu_pbp;
-    fout_out.open(DEBUG_FILE_DIR("mat_out.txt"),ios::out);
-    fout_imu_pbp.open(DEBUG_FILE_DIR("imu_pbp.txt"),ios::out);
-    if (fout_out && fout_imu_pbp)
-        cout << "~~~~"<<ROOT_DIR<<" file opened" << endl;
-    else
-        cout << "~~~~"<<ROOT_DIR<<" doesn't exist" << endl;
+    open_file();
 
     /*** ROS subscribe initialization ***/
     ros::Subscriber sub_pcl = p_pre->lidar_type == AVIA ? \
@@ -679,7 +668,7 @@ int main(int argc, char** argv)
             }
             if (!nolidar)
             {
-                time_seq = time_compressing(feats_down_body);
+                time_seq = time_compressing<int>(feats_down_body);
                 feats_down_size = feats_down_body->points.size();
             }
             else
@@ -747,7 +736,7 @@ int main(int argc, char** argv)
             }
 
 
-            if (!p_imu->LI_init_done && !data_accum_start && state.pos_end.norm() > 0.05) {
+            if (!p_imu->LI_init_done && !data_accum_start && p_imu->state_LI_Init.pos.norm() > 0.05) {
                 printf(BOLDCYAN "[Initialization] Movement detected, data accumulation starts.\n\n\n\n\n" RESET);
                 data_accum_start = true;
                 move_start_time = lidar_end_time;
@@ -755,7 +744,7 @@ int main(int argc, char** argv)
  
             if (!p_imu->LI_init_done && !data_accum_finished && data_accum_start) {
                 //Push Lidar's Angular velocity and linear velocity
-                Init_LI->push_Lidar_CalibState(p_imu->state_LI_Init.rot, p_imu->state_LI_Init.bg, p_imu->state_LI_Init.vel, lidar_end_time);
+                Init_LI->push_Lidar_CalibState(p_imu->state_LI_Init.rot.toRotationMatrix(), p_imu->state_LI_Init.bg, p_imu->state_LI_Init.vel, lidar_end_time);
                 //Data Accumulation Sufficience Appraisal
                 data_accum_finished = Init_LI->data_sufficiency_assess(Jaco_rot, frame_num_init, p_imu->state_LI_Init.bg,
                                                                        orig_odom_freq, cut_frame_num);
@@ -776,8 +765,8 @@ int main(int argc, char** argv)
                 { 
                     M3D rot_init;
                     p_imu->Set_init(rot_init);  
-                    kf_input.x_.rot = Quaternion(rot_init);
-                    kf_output.x_.rot = kf_input._x_.rot;
+                    kf_input.x_.rot = rot_init;
+                    kf_output.x_.rot = kf_input.x_.rot;
                     if (!p_gnss->gnss_online_init && GNSS_ENABLE)
                     {   
                         // p_gnss->gnss_ready = true;
@@ -1319,7 +1308,7 @@ int main(int argc, char** argv)
                                         state_out.acc = state_out.rot.conjugate() * (-state_out.gravity); // R_ecef_enu * state.vel_end;
                                         // cout << "check para:" << state_const.pos_end.transpose() << ";" << state_const.vel_end.transpose() << ";" << dt << endl;
                                         
-                                        kf_output.cov = MD(24,24)::Identity() * INIT_COV;
+                                        kf_output.P_ = MD(24,24)::Identity() * INIT_COV;
                                     }
                                 }
                             }
@@ -1443,12 +1432,12 @@ int main(int argc, char** argv)
                                     }
                                     kf_input.predict(dt_cov, Q_input, input_in, false, true);
 
-                                    p_gnss->pre_integration->push_back(dt, input_in.acc, input_in.omg);
-                                    p_gnss->processIMU(dt, input_in.acc, input_in.omg);
+                                    p_gnss->pre_integration->push_back(dt, input_in.acc, input_in.gyro);
+                                    p_gnss->processIMU(dt, input_in.acc, input_in.gyro);
 
                                     t_last = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
-                                    p_gnss->processGNSS(gnss_cur, kf_input.x_, input_in.omg);
-                                    update_gnss = p_gnss->Evaluate(kf_input.x_, input_in.omg);
+                                    p_gnss->processGNSS(gnss_cur, kf_input.x_, input_in.gyro);
+                                    update_gnss = p_gnss->Evaluate(kf_input.x_, input_in.gyro);
                                     if (!p_gnss->gnss_ready)
                                     {
                                         flg_reset = true;
@@ -1478,7 +1467,7 @@ int main(int argc, char** argv)
                                     state_in.rot = Rot_gnss_init * state_in.rot;
                                     state_in.pos = Rot_gnss_init * state_in.pos;
                                     state_in.vel = Rot_gnss_init * state_in.vel;
-                                    p_gnss->processGNSS(gnss_cur, state_in, input_in.omg);
+                                    p_gnss->processGNSS(gnss_cur, state_in, input_in.gyro);
                                 }
                                 p_gnss->gnss_msg.pop();
                                 if(!p_gnss->gnss_msg.empty())
@@ -1506,8 +1495,8 @@ int main(int argc, char** argv)
                         double dt_cov = imu_last.header.stamp.toSec() - time_update_last;
                         if (p_gnss->gnss_ready)
                         {
-                            p_gnss->pre_integration->push_back(dt, input_in.acc, input_in.omg);
-                            p_gnss->processIMU(dt, input_in.acc, input_in.omg);
+                            p_gnss->pre_integration->push_back(dt, input_in.acc, input_in.gyro);
+                            p_gnss->processIMU(dt, input_in.acc, input_in.gyro);
                         }
                         if (dt_cov > 0.0)
                         {
@@ -1552,11 +1541,11 @@ int main(int argc, char** argv)
                             }
                             kf_input.predict(dt, Q_input, input_in, true, false); 
 
-                            p_gnss->pre_integration->push_back(dt, input_in.acc, input_in.omg);
-                            p_gnss->processIMU(dt, input_in.acc, input_in.omg);
+                            p_gnss->pre_integration->push_back(dt, input_in.acc, input_in.gyro);
+                            p_gnss->processIMU(dt, input_in.acc, input_in.gyro);
                             t_last = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
-                            p_gnss->processGNSS(gnss_cur, kf_input.x_, input_in.omg);
-                            update_gnss = p_gnss->Evaluate(kf_input.x_, input_in.omg);
+                            p_gnss->processGNSS(gnss_cur, kf_input.x_, input_in.gyro);
+                            update_gnss = p_gnss->Evaluate(kf_input.x_, input_in.gyro);
                             if (!p_gnss->gnss_ready)
                             {
                                 flg_reset = true;
@@ -1586,7 +1575,7 @@ int main(int argc, char** argv)
                             state_in.rot = Rot_gnss_init * state_in.rot;
                             state_in.pos = Rot_gnss_init * state_in.pos;
                             state_in.vel = Rot_gnss_init * state_in.vel;
-                            p_gnss->processGNSS(gnss_cur, state_in, input_in.omg);
+                            p_gnss->processGNSS(gnss_cur, state_in, input_in.gyro);
                         }
                         p_gnss->gnss_msg.pop();
                         if(!p_gnss->gnss_msg.empty())
@@ -1621,8 +1610,8 @@ int main(int argc, char** argv)
                     propag_time += omp_get_wtime() - propag_start;
                     if (GNSS_ENABLE)
                     {
-                        p_gnss->pre_integration->push_back(dt, input_in.acc, input_in.omg);
-                        p_gnss->processIMU(dt, input_in.acc, input_in.omg);
+                        p_gnss->pre_integration->push_back(dt, input_in.acc, input_in.gyro);
+                        p_gnss->processIMU(dt, input_in.acc, input_in.gyro);
                     }
                     // if(k == 0)
                     // {
@@ -1737,14 +1726,14 @@ int main(int argc, char** argv)
                             
                             t_last = time_current;
                             time_update_last = time_current; 
-                            input_in.omg<<imu_next.angular_velocity.x, imu_next.angular_velocity.y, imu_next.angular_velocity.z;
+                            input_in.gyro<<imu_next.angular_velocity.x, imu_next.angular_velocity.y, imu_next.angular_velocity.z;
                                             
                             input_in.acc   <<imu_next.linear_acceleration.x, imu_next.linear_acceleration.y, imu_next.linear_acceleration.z;
-                            inpu_in.acc = input_in.acc * G_m_s2 / acc_norm;
+                            input_in.acc = input_in.acc * G_m_s2 / acc_norm;
                             if (GNSS_ENABLE)
                             {
                                 p_gnss->pre_integration->repropagate(kf_input.x_.ba, kf_input.x_.bg);
-                                p_gnss->pre_integration->setacc0gyr0(input_in.acc, input_in.omg);
+                                p_gnss->pre_integration->setacc0gyr0(input_in.acc, input_in.gyro);
                             }
                             if (nolidar && !p_gnss->gnss_online_init) // no meaning
                             {
@@ -1753,7 +1742,7 @@ int main(int argc, char** argv)
                                     gnss_cur = p_gnss->gnss_msg.front();
                                     if (time2sec(gnss_cur[0]->time) < imu_first_time + lidar_time_inte + gnss_local_time_diff)
                                     {
-                                        p_gnss->processGNSS(gnss_cur, kf_input.x_, input_in.omg);
+                                        p_gnss->processGNSS(gnss_cur, kf_input.x_, input_in.gyro);
                                         if (1) // (p_gnss->gnss_meas_buf[0].size() > 4)
                                         {
                                             set_gnss_offline_init(true);
@@ -1799,11 +1788,11 @@ int main(int argc, char** argv)
                                 }
                                 kf_input.predict(dt, Q_input, input_in, true, false);
 
-                                p_gnss->pre_integration->push_back(dt, input_in.acc, input_in.omg);
+                                p_gnss->pre_integration->push_back(dt, input_in.acc, input_in.gyro);
 
                                 t_last = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
-                                p_gnss->processGNSS(gnss_cur, kf_input.x_, input_in.omg);
-                                update_gnss = p_gnss->Evaluate(kf_input.x_, input_in.omg);
+                                p_gnss->processGNSS(gnss_cur, kf_input.x_, input_in.gyro);
+                                update_gnss = p_gnss->Evaluate(kf_input.x_, input_in.gyro);
                                 if (!p_gnss->gnss_ready)
                                 {
                                     flg_reset = true;
@@ -1834,21 +1823,21 @@ int main(int argc, char** argv)
                                 kf_input.predict(dt, Q_input, input_in, true, false);
 
                                 t_last = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
-                                p_gnss->processGNSS(gnss_cur, kf_input.x_, input_in.omg);
+                                p_gnss->processGNSS(gnss_cur, kf_input.x_, input_in.gyro);
                                 if (p_gnss->gnss_ready)
                                 {
                                     if (nolidar)
                                     {
                                         Eigen::Matrix3d R_enu_local_;
                                         R_enu_local_ = Eigen::AngleAxisd(p_gnss->yaw_enu_local, Eigen::Vector3d::UnitZ());
-                                        state.pos_end = p_gnss->anc_ecef - p_gnss->R_ecef_enu * R_enu_local_ * state.rot_end * p_gnss->Tex_imu_r;
-                                        state.rot_end = p_gnss->R_ecef_enu * R_enu_local_ * state.rot_end;
-                                        state.vel_end = p_gnss->R_ecef_enu * R_enu_local_ * state.vel_end; //Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
-                                        state.bias_a = Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
-                                        state.bias_g = Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
-                                        state.gravity = p_gnss->R_ecef_enu * state.gravity; // * R_enu_local_
-
-                                        state.cov = MD(DIM_STATE,DIM_STATE)::Identity() * INIT_COV;
+                                        state_in.pos = p_gnss->anc_ecef - p_gnss->R_ecef_enu * R_enu_local_ * kf_input.x_.rot.toRotationMatrix() * p_gnss->Tex_imu_r;
+                                        state_in.rot = p_gnss->R_ecef_enu * R_enu_local_ * kf_input.x_.rot.toRotationMatrix();
+                                        state_in.vel = p_gnss->R_ecef_enu * R_enu_local_ * kf_input.x_.vel; //Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
+                                        state_in.ba = Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
+                                        state_in.bg = Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
+                                        state_in.gravity = p_gnss->R_ecef_enu * kf_input.x_.gravity; // * R_enu_local_
+                                        kf_input.change_x(state_in);
+                                        kf_input.P_ = MD(18,18)::Identity() * INIT_COV;
                                     }
                                 }
                             }
@@ -1890,11 +1879,11 @@ int main(int argc, char** argv)
                                 time_update_last = imu_next.header.stamp.toSec(); //time_current;
                             }                                    
                             kf_input.predict(dt, Q_input, input_in, true, false);
-                            p_gnss->pre_integration->push_back(dt, input_in.acc, input_in.omg);
+                            p_gnss->pre_integration->push_back(dt, input_in.acc, input_in.gyro);
                             t_last = imu_next.header.stamp.toSec();
                         }
                         input_in.acc<<imu_next.angular_velocity.x, imu_next.angular_velocity.y, imu_next.angular_velocity.z;
-                        input_in.omg<<imu_next.linear_acceleration.x, imu_next.linear_acceleration.y, imu_next.linear_acceleration.z; 
+                        input_in.gyro<<imu_next.linear_acceleration.x, imu_next.linear_acceleration.y, imu_next.linear_acceleration.z; 
                         input_in.acc = input_in.acc * G_m_s2 / acc_norm;
                         imu_deque.pop_front();
                         if (imu_deque.empty()) break;
@@ -1971,7 +1960,7 @@ int main(int argc, char** argv)
                             anc << offline_init_vec[0], offline_init_vec[1], offline_init_vec[2];
                             R_enu_local_ = ecef2rotation(anc) * Eigen::AngleAxisd(offline_init_vec[3], Eigen::Vector3d::UnitZ()); 
                             Eigen::Vector3d pos_enu = p_gnss->local2enu(R_enu_local_, anc, pos_r);
-                            euler_cur = RotMtoEuler(kf_output.x_.rot);
+                            euler_cur = SO3ToEuler(kf_output.x_.rot);
                             fout_out << setw(20) << imu_next.header.stamp.toSec() - first_imu_time << " " << euler_cur.transpose()*57.3 << " " << pos_enu.transpose() << " " << kf_output.x_.vel.transpose() \
                                         <<" "<<kf_output.x_.omg.transpose()<<" "<<kf_output.x_.acc.transpose()<<" "<<kf_output.x_.gravity.transpose()<<" "<<kf_output.x_.bg.transpose() <<" "<<kf_output.x_.ba.transpose()<<" "<< 0 <<endl;
                         }
@@ -1988,7 +1977,7 @@ int main(int argc, char** argv)
                             anc << offline_init_vec[0], offline_init_vec[1], offline_init_vec[2];
                             R_enu_local_ = ecef2rotation(anc) * Eigen::AngleAxisd(offline_init_vec[3], Eigen::Vector3d::UnitZ()); 
                             Eigen::Vector3d pos_enu = p_gnss->local2enu(R_enu_local_, anc, pos_r);
-                            euler_cur = RotMtoEuler(kf_input.x_.rot);
+                            euler_cur = SO3ToEuler(kf_input.x_.rot);
                             fout_out << setw(20) << imu_next.header.stamp.toSec() - first_imu_time << " " << euler_cur.transpose()*57.3 << " " << pos_enu.transpose() << " " << kf_input.x_.vel.transpose() \
                             <<" "<<kf_input.x_.bg.transpose()<<" "<<kf_input.x_.ba.transpose()<<" "<<kf_input.x_.gravity.transpose()<<" " <<0<<endl;
                         }

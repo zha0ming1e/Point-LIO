@@ -11,6 +11,8 @@
 #include <eigen_conversions/eigen_msg.h>
 #include <color.h>
 #include <../include/IKFoM/IKFoM_toolkit/esekfom/esekfom.hpp>
+#include <ligo/LocalSensorExternalTrigger.h>
+#include <queue>
 
 using namespace std;
 using namespace Eigen;
@@ -232,5 +234,8 @@ bool esti_plane(Matrix<T, 4, 1> &pca_result, const PointVector &point, const T &
     }
     return true;
 }
+// const bool time_list(PointType &x, PointType &y); // {return (x.curvature < y.curvature);};
+// template<typename T>
+// const bool time_list(PointType &x, PointType &y) {return (x.curvature < y.curvature);};
 
 #endif
