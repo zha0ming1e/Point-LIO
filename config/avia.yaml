@@ -19,9 +19,10 @@ mapping:
     imu_en: true
     extrinsic_est_en: false # for aggressive motion, set this variable false
     imu_time_inte: 0.005 # = 1 / frequency of IMU
+    lidar_time_inte: 0.1
     satu_acc: 30.0 # the saturation value of IMU's acceleration. not related to the units
     satu_gyro: 35 # the saturation value of IMU's angular velocity. not related to the units
-    acc_norm: 9.81 # 1.0 for g as unit, 9.81 for m/s^2 as unit of the IMU's acceleration
+    acc_norm: 1.0 # 1.0 for g as unit, 9.81 for m/s^2 as unit of the IMU's acceleration
     lidar_meas_cov: 0.01 # 0.001; 0.01
     acc_cov_output: 500
     gyr_cov_output: 1000 
@@ -35,7 +36,7 @@ mapping:
     match_s: 81
     fov_degree: 90 
     det_range: 450.0
-    gravity: [0.0, 0.0, -9.810] # [0.0, 9.810, 0.0] # # preknown gravity, use when imu_en is false or start from a non-stationary state
+    gravity: [0.0, 0.0, -9.810] # [0.0, 9.810, 0.0] # # [0.0, 0.0, -9.787561] # gvins # 
     extrinsic_T: [ 0.04165, 0.02326, -0.0284 ] # [-0.0380, -0.0085, -0.0730] # fg
     extrinsic_R: [ 1, 0, 0,
                    0, 1, 0,
@@ -45,10 +46,10 @@ mapping:
                 #    0.0, 0.0, -1.0 ] # fg
 
 gnss:
-    gnss_enable: false
-    nolidar: false
+    gnss_enable: true
+    nolidar: true
     quick_init: false
-    online_init: true # false is wei ming ti, maybe can work when this value is false now: yes
+    online_init: true # false is pseudo-proposition, maybe can work when this value is false now: yes
     ephem_from_rinex: false
     outlier_rejection: true # for offline initial and no lidar or broaden the outlier rejection threshold // can be modified as well
     psr_dopp_weight: 1 # 

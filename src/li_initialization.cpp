@@ -184,7 +184,6 @@ void standard_pcl_cbk(const sensor_msgs::PointCloud2::ConstPtr &msg)
     sig_buffer.notify_all();
 }
 
-
 void livox_pcl_cbk(const livox_ros_driver::CustomMsg::ConstPtr &msg) 
 {
     mtx_buffer.lock();
@@ -296,7 +295,6 @@ void imu_cbk(const sensor_msgs::Imu::ConstPtr &msg_in)
     mtx_buffer.unlock();
     sig_buffer.notify_all();
 }
-
 
 bool sync_packages(MeasureGroup &meas, queue<std::vector<ObsPtr>> &gnss_msg)
 {

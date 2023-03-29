@@ -683,14 +683,13 @@ int main(int argc, char** argv)
             //     continue;
             // }
             /*** initialize the map kdtree ***/
-            if(!init_map)
+            if(!init_map && !nolidar)
             {
                 if(ikdtree.Root_Node == nullptr) //
                 // if(feats_down_size > 5)
                 {
                     ikdtree.set_downsample_param(filter_size_map_min);
                 }
-                    
                 feats_down_world->resize(feats_undistort->size());
                 for(int i = 0; i < feats_undistort->size(); i++)
                 {
@@ -1114,19 +1113,6 @@ int main(int argc, char** argv)
                         idx = idx+time_seq[k];
                         continue;
                     }
-
-                    // if(prop_at_freq_of_imu)
-                    // {
-                    //     double dt_cov = time_current - time_update_last;
-                    //     if ((imu_upda_cov && dt_cov > 0.0) || (!imu_en && (dt_cov >= imu_time_inte)) || (imu_en && (dt_cov >= imu_time_inte * 1.2))) // (point_cov_not_prop && imu_prop_cov)
-                    //     {
-                    //         double propag_cov_start = omp_get_wtime();
-                    //         kf_output.predict(dt_cov, Q_output, input_in, false, true);
-                    //         imu_upda_cov = false;
-                    //         time_update_last = time_current;
-                    //         propag_time += omp_get_wtime() - propag_cov_start;
-                    //     }
-                    // }
                     solve_start = omp_get_wtime();
                         
                     if (publish_odometry_without_downsample)
@@ -1321,7 +1307,6 @@ int main(int argc, char** argv)
                                         state_out.omg = Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
                                         state_out.gravity = p_gnss->R_ecef_enu * state_out.gravity; // * R_enu_local_ 
                                         state_out.acc = state_out.rot.conjugate() * (-state_out.gravity); // R_ecef_enu * state.vel_end;
-                                        // cout << "check para:" << state_const.pos_end.transpose() << ";" << state_const.vel_end.transpose() << ";" << dt << endl;
                                         
                                         kf_output.P_ = MD(24,24)::Identity() * INIT_COV;
                                     }
@@ -1655,18 +1640,6 @@ int main(int argc, char** argv)
 
                     solve_start = omp_get_wtime();
 
-                    // if(prop_at_freq_of_imu)
-                    // {
-                    //     double dt_cov = time_current - time_update_last;
-                    //     if ((imu_prop_cov && dt_cov > 0.0) || (dt_cov >= imu_time_inte * 1.2)) 
-                    //     {
-                    //         double propag_cov_start = omp_get_wtime();
-                    //         kf_input.predict(dt_cov, Q_input, input_in, false, true); 
-                    //         propag_time += omp_get_wtime() - propag_cov_start;
-                    //         time_update_last = time_current;
-                    //         imu_prop_cov = false;
-                    //     }
-                    // }
                     if (publish_odometry_without_downsample)
                     {
                         /******* Publish odometry *******/
@@ -1745,9 +1718,9 @@ int main(int argc, char** argv)
                             
                             t_last = time_current;
                             time_update_last = time_current; 
-                            input_in.gyro<<imu_next.angular_velocity.x, imu_next.angular_velocity.y, imu_next.angular_velocity.z;
+                            input_in.gyro<<imu_last.angular_velocity.x, imu_last.angular_velocity.y, imu_last.angular_velocity.z;
                                             
-                            input_in.acc   <<imu_next.linear_acceleration.x, imu_next.linear_acceleration.y, imu_next.linear_acceleration.z;
+                            input_in.acc   <<imu_last.linear_acceleration.x, imu_last.linear_acceleration.y, imu_last.linear_acceleration.z;
                             input_in.acc = input_in.acc * G_m_s2 / acc_norm;
                             if (GNSS_ENABLE)
                             {
@@ -1828,7 +1801,7 @@ int main(int argc, char** argv)
                                     {
                                         kf_input.update_iterated_dyn_share_GNSS();
                                     }
-                                    void cout_state_to_file();
+                                    cout_state_to_file();
                                 }
                             }
                             else
@@ -1838,24 +1811,23 @@ int main(int argc, char** argv)
                                     kf_input.predict(dt_cov, Q_input, input_in, false, true);
                                     time_update_last = time2sec(gnss_cur[0]->time) - gnss_local_time_diff; //time_current;
                                 }
-                                
                                 kf_input.predict(dt, Q_input, input_in, true, false);
-
                                 t_last = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                                 p_gnss->processGNSS(gnss_cur, kf_input.x_, input_in.gyro);
+                                cout << "check gnss ready:" << p_gnss->gnss_ready << ";" << kf_input.x_.gravity.transpose() << ";" << (kf_input.x_.rot * input_in.acc).transpose() << endl;
                                 if (p_gnss->gnss_ready)
                                 {
                                     if (nolidar)
                                     {
                                         Eigen::Matrix3d R_enu_local_;
                                         R_enu_local_ = Eigen::AngleAxisd(p_gnss->yaw_enu_local, Eigen::Vector3d::UnitZ());
-                                        state_in.pos = p_gnss->anc_ecef - p_gnss->R_ecef_enu * R_enu_local_ * kf_input.x_.rot.toRotationMatrix() * p_gnss->Tex_imu_r;
-                                        state_in.rot = p_gnss->R_ecef_enu * R_enu_local_ * kf_input.x_.rot.toRotationMatrix();
-                                        state_in.vel = p_gnss->R_ecef_enu * R_enu_local_ * kf_input.x_.vel; //Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
-                                        state_in.ba = Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
-                                        state_in.bg = Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
-                                        state_in.gravity = p_gnss->R_ecef_enu * kf_input.x_.gravity; // * R_enu_local_
-                                        kf_input.change_x(state_in);
+                                        kf_input.x_.pos = p_gnss->anc_ecef - p_gnss->R_ecef_enu * R_enu_local_ * kf_input.x_.rot.toRotationMatrix() * p_gnss->Tex_imu_r;
+                                        kf_input.x_.rot = p_gnss->R_ecef_enu * R_enu_local_ * kf_input.x_.rot.toRotationMatrix();
+                                        kf_input.x_.vel = p_gnss->R_ecef_enu * R_enu_local_ * kf_input.x_.vel; //Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
+                                        kf_input.x_.ba = Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
+                                        kf_input.x_.bg = Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
+                                        kf_input.x_.gravity = p_gnss->R_ecef_enu * kf_input.x_.gravity; // * R_enu_local_
+                                        // kf_input.change_x(state_in);
                                         kf_input.P_ = MD(18,18)::Identity() * INIT_COV;
                                     }
                                 }
@@ -1877,8 +1849,6 @@ int main(int argc, char** argv)
                         }
                         double dt = time_current - t_last;
 
-                        if (!p_gnss->gnss_ready)  
-                        {
                         double dt_cov = time_current - time_update_last;
                         if (dt_cov > 0.0)
                         {        
@@ -1888,21 +1858,13 @@ int main(int argc, char** argv)
                         kf_input.predict(dt, Q_input, input_in, true, false);
 
                         t_last = imu_next.header.stamp.toSec();
-                        }
-                        else
+                    
+                        if (p_gnss->gnss_ready)
                         {
-                            double dt_cov = time_current - time_update_last;
-                            if (dt_cov > 0.0)
-                            {
-                                kf_input.predict(dt_cov, Q_input, input_in, false, true);
-                                time_update_last = imu_next.header.stamp.toSec(); //time_current;
-                            }                                    
-                            kf_input.predict(dt, Q_input, input_in, true, false);
                             p_gnss->pre_integration->push_back(dt, input_in.acc, input_in.gyro);
-                            t_last = imu_next.header.stamp.toSec();
                         }
-                        input_in.acc<<imu_next.angular_velocity.x, imu_next.angular_velocity.y, imu_next.angular_velocity.z;
-                        input_in.gyro<<imu_next.linear_acceleration.x, imu_next.linear_acceleration.y, imu_next.linear_acceleration.z; 
+                        input_in.gyro<<imu_next.angular_velocity.x, imu_next.angular_velocity.y, imu_next.angular_velocity.z;
+                        input_in.acc<<imu_next.linear_acceleration.x, imu_next.linear_acceleration.y, imu_next.linear_acceleration.z; 
                         input_in.acc = input_in.acc * G_m_s2 / acc_norm;
                         imu_deque.pop_front();
                         if (imu_deque.empty()) break;
@@ -1935,7 +1897,7 @@ int main(int argc, char** argv)
             /******* Publish odometry downsample *******/
             if (!publish_odometry_without_downsample)
             {
-                publish_odometry(pubOdomAftMapped);
+                // publish_odometry(pubOdomAftMapped);
             }
 
             /*** add the feature points to map kdtree ***/

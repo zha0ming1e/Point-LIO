@@ -44,7 +44,7 @@ bool time_diff_valid = false, is_first_gnss = true;
 double latest_gnss_time = -1, next_pulse_time = 0.0; 
 double time_diff_gnss_local = 0.0;
 bool gnss_local_online_sync = true, nolidar = false; 
-double li_init_gyr_cov = 0.1, li_init_acc_cov = 0.1, lidar_time_inte = 0.01, first_imu_time = 0.0;
+double li_init_gyr_cov = 0.1, li_init_acc_cov = 0.1, lidar_time_inte = 0.1, first_imu_time = 0.0;
 int cut_frame_num = 1, orig_odom_freq = 10;
 double online_refine_time = 20.0; //unit: s
 bool cut_frame_init = true;
@@ -113,7 +113,7 @@ void readParameters(ros::NodeHandle &nh)
   nh.param<bool>("pcd_save/pcd_save_en", pcd_save_en, false);
   nh.param<int>("pcd_save/interval", pcd_save_interval, -1);
 
-  nh.param<double>("mapping/lidar_time_inte",lidar_time_inte,0.005);
+  nh.param<double>("mapping/lidar_time_inte",lidar_time_inte,0.1);
   nh.param<double>("mapping/lidar_meas_cov",laser_point_cov,0.1);
   nh.param<double>("gnss/psr_dopp_weight",p_gnss->relative_sqrt_info, 10);
   nh.param<double>("gnss/cp_weight",p_gnss->cp_weight, 0.1);
@@ -136,7 +136,7 @@ void readParameters(ros::NodeHandle &nh)
         nh.param<double>("initialization/data_accum_length", Init_LI->data_accum_length, 300);
         p_imu->LI_init_done = false;
     }
-
+    p_imu->gravity_ << VEC_FROM_ARRAY(gravity_init);
     nh.param<bool>("gnss/gnss_enable", GNSS_ENABLE, false);
     nh.param<bool>("gnss/outlier_rejection", p_gnss->outlier_rej, false);
     cout << "gnss enable:" << GNSS_ENABLE << endl;

@@ -434,6 +434,7 @@ void GNSSProcess::processGNSS(const std::vector<ObsPtr> &gnss_meas, state_input 
     gnss_ready = GNSSLIAlign();
     if (gnss_ready)
     {
+      ROS_INFO("GNSS Initialization is done");
       state_ = state;
       state_last = state;
     }
@@ -777,6 +778,10 @@ void GNSSProcess::runISAM2opt(void) //
   {
     pre_integration->repropagate(isamCurrentEstimate.at<gtsam::Vector12>(F(frame_num-1)).segment<3>(6),
                                 isamCurrentEstimate.at<gtsam::Vector12>(F(frame_num-1)).segment<3>(9));
+  }
+  else
+  {
+    pre_integration->repropagate(Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero());
   }
   std::map<std::pair<double, int>, std::map<uint32_t, double[6]>>::iterator it_old;
   if (!sat2cp.empty())
