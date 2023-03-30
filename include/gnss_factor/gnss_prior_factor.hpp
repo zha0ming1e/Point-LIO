@@ -6,6 +6,7 @@
 #include <gtsam/nonlinear/Marginals.h>
 #include <gtsam/base/Vector.h>
 #include <gtsam/inference/Symbol.h>
+using namespace gnss_comm;
 
 /* 
 **  initial anc, yaw, ddt, dt;

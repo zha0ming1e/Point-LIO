@@ -80,7 +80,7 @@ extern Eigen::Matrix3d Rot_gnss_init;
 
 extern MeasureGroup Measures;
 
-extern ofstream fout_out, fout_imu_pbp;
+extern ofstream fout_out, fout_imu_pbp, fout_rtk;
 void readParameters(ros::NodeHandle &n);
 void open_file();
 vect3 SO3ToEuler(const SO3 &orient);

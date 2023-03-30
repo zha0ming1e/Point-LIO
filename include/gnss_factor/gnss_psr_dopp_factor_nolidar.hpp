@@ -7,6 +7,7 @@
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/base/Vector.h>
+using namespace gnss_comm;
 
 /* 
 **  parameters[0]: position and orientation at time k

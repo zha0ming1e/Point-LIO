@@ -7,6 +7,7 @@
 #include <gtsam/base/Vector.h>
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/inference/Symbol.h>
+using namespace gnss_comm;
 
 /* 
 **  initial anc, yaw, ddt, dt;

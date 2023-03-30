@@ -26,13 +26,13 @@ std::queue<std::vector<ObsPtr>> gnss_meas_buf;
 void gnss_ephem_callback(const GnssEphemMsgConstPtr &ephem_msg)
 {
     EphemPtr ephem = msg2ephem(ephem_msg);
-    p_gnss->inputEphem(ephem);
+    p_gnss->p_assign->inputEphem(ephem);
 }
 
 void gnss_glo_ephem_callback(const GnssGloEphemMsgConstPtr &glo_ephem_msg)
 {
     GloEphemPtr glo_ephem = msg2glo_ephem(glo_ephem_msg);
-    p_gnss->inputEphem(glo_ephem);
+    p_gnss->p_assign->inputEphem(glo_ephem);
 }
 
 void gnss_iono_params_callback(const StampedFloat64ArrayConstPtr &iono_msg)
@@ -849,6 +849,7 @@ void LI_Init_set()
         kf_input.x_.pos = -(p_imu->state_LI_Init.rot.normalized().toRotationMatrix() * Lidar_R_wrt_IMU.transpose() * Lidar_T_wrt_IMU +
                         p_imu->state_LI_Init.pos); //Body frame is IMU frame in Point-LIO mode
         kf_input.x_.rot = p_imu->state_LI_Init.rot.normalized().toRotationMatrix() * Lidar_R_wrt_IMU.transpose();
+        kf_input.x_.rot.normalize();
         gravity_lio = Init_LI->get_Grav_L0();
         kf_input.x_.gravity = Init_LI->get_Grav_L0();
         kf_input.x_.bg = Init_LI->get_gyro_bias();
@@ -859,6 +860,7 @@ void LI_Init_set()
         kf_output.x_.pos = -1 * (p_imu->state_LI_Init.rot.normalized().toRotationMatrix() * Lidar_R_wrt_IMU.transpose() * Lidar_T_wrt_IMU +
                         p_imu->state_LI_Init.pos); //Body frame is IMU frame in Point-LIO mode
         kf_output.x_.rot = p_imu->state_LI_Init.rot.normalized().toRotationMatrix() * Lidar_R_wrt_IMU.transpose();
+        kf_output.x_.rot.normalize();
         gravity_lio = Init_LI->get_Grav_L0();
         kf_output.x_.gravity = Init_LI->get_Grav_L0();
         kf_output.x_.bg = Init_LI->get_gyro_bias();

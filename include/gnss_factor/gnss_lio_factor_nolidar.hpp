@@ -8,6 +8,7 @@
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/base/Vector.h>
 #include "integration_base.h"
+using namespace gnss_comm;
 
 /* 
 **  parameters[0]: position and orientation at time k
