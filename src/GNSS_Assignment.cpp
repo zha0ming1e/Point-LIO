@@ -373,7 +373,7 @@ void GNSSAssignment::processGNSSBase(const std::vector<ObsPtr> &gnss_meas, std::
   }
 }
 
-void GNSSAssignment::delete_variables(bool nolidar, size_t frame_delete, int frame_num, size_t &id_accumulate, gtsam::FactorIndices &delete_factor)
+void GNSSAssignment::delete_variables(bool nolidar, size_t frame_delete, int frame_num, size_t &id_accumulate, gtsam::FactorIndices delete_factor)
 {
     if (!nolidar)
     {

@@ -120,7 +120,7 @@ class GNSSAssignment
         std::map<uint32_t, uint32_t> sat_track_status; //
         double gnss_elevation_threshold;
         void processGNSSBase(const std::vector<ObsPtr> &gnss_meas, std::vector<ObsPtr> &valid_meas, std::vector<EphemBasePtr> &valid_ephems, bool gnss_ready, Eigen::Vector3d ecef_pos);
-        void delete_variables(bool nolidar, size_t frame_delete, int frame_num, size_t &id_accumulate, gtsam::FactorIndices &delete_factor);
+        void delete_variables(bool nolidar, size_t frame_delete, int frame_num, size_t &id_accumulate, gtsam::FactorIndices delete_factor);
 
         double str2double(const std::string &num_str);
         EphemPtr rinex_line2ephem(const std::vector<std::string> &ephem_lines);
