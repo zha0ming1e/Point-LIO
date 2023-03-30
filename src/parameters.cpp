@@ -267,13 +267,13 @@ void set_gnss_offline_init(bool nolidar_)
         {
             init_vel_bias_vector.block<3,1>(0,0) = kf_input.x_.pos;
             init_vel_bias_vector.block<3,1>(3,0) = kf_input.x_.vel;
-            rot_init = kf_input.x_.rot.toRotationMatrix();
+            rot_init = kf_input.x_.rot.normalized().toRotationMatrix();
         }
         else
         {
             init_vel_bias_vector.block<3,1>(0,0) = kf_output.x_.pos;
             init_vel_bias_vector.block<3,1>(3,0) = kf_output.x_.vel;
-            rot_init = kf_output.x_.rot.toRotationMatrix();
+            rot_init = kf_output.x_.rot.normalized().toRotationMatrix();
         }
         // init_vel_bias_vector.block<6,1>(6,0) = Eigen::Matrix<double, 6, 1>::Zero();
         gtsam::PriorFactor<gtsam::Rot3> init_rot_(R(0), gtsam::Rot3(rot_init), p_gnss->priorrotNoise);
@@ -321,11 +321,11 @@ void set_gnss_offline_init(bool nolidar_)
             R_ecef_enu = ecef2rotation(state_in.pos);
             R_enu_local_ = Eigen::AngleAxisd(offline_init_vec[3], Eigen::Vector3d::UnitZ());
             state_in.rot = R_ecef_enu * R_enu_local_;
-            state_in.pos -= state_in.rot * p_gnss->Tex_imu_r;
+            state_in.pos -= state_in.rot.normalized().toRotationMatrix() * p_gnss->Tex_imu_r;
             state_in.gravity = R_ecef_enu * kf_input.x_.gravity; // * R_enu_local_ 
             kf_input.change_x(state_in);
         
-            gtsam::PriorFactor<gtsam::Rot3> init_rot(R(0), gtsam::Rot3(state_in.rot), p_gnss->priorposNoise);
+            gtsam::PriorFactor<gtsam::Rot3> init_rot(R(0), gtsam::Rot3(state_in.rot.normalized().toRotationMatrix()), p_gnss->priorposNoise);
             gtsam::PriorFactor<gtsam::Vector4> init_dt(B(0), gtsam::Vector4(offline_init_vec[5], offline_init_vec[6], offline_init_vec[7], offline_init_vec[8]), p_gnss->priordtNoise);
             gtsam::PriorFactor<gtsam::Vector1> init_ddt(C(0), gtsam::Vector1(offline_init_vec[4]), p_gnss->priorddtNoise);
             // Eigen::Matrix<double, 12, 1> init_vel_bias_vector;
@@ -334,7 +334,7 @@ void set_gnss_offline_init(bool nolidar_)
             init_vel_bias_vector.block<3,1>(6,0) = state_in.ba;
             init_vel_bias_vector.block<3,1>(9,0) = state_in.bg;
             gtsam::PriorFactor<gtsam::Vector12> init_vel_bias(F(0), gtsam::Vector12(init_vel_bias_vector), p_gnss->priorposNoise);
-            p_gnss->initialEstimate.insert(R(0), gtsam::Rot3(state_in.rot));
+            p_gnss->initialEstimate.insert(R(0), gtsam::Rot3(state_in.rot.normalized().toRotationMatrix()));
             p_gnss->state_ = state_in;
 
             p_gnss->gtSAMgraph.add(init_rot);
@@ -351,11 +351,11 @@ void set_gnss_offline_init(bool nolidar_)
             R_ecef_enu = ecef2rotation(state_out.pos);
             R_enu_local_ = Eigen::AngleAxisd(offline_init_vec[3], Eigen::Vector3d::UnitZ());
             state_out.rot = R_ecef_enu * R_enu_local_;
-            state_out.pos -= state_out.rot * p_gnss->Tex_imu_r;
+            state_out.pos -= state_out.rot.normalized().toRotationMatrix() * p_gnss->Tex_imu_r;
             state_out.gravity = R_ecef_enu * kf_output.x_.gravity; // * R_enu_local_ 
             kf_output.change_x(state_out);
         
-            gtsam::PriorFactor<gtsam::Rot3> init_rot(R(0), gtsam::Rot3(state_in.rot), p_gnss->priorposNoise);
+            gtsam::PriorFactor<gtsam::Rot3> init_rot(R(0), gtsam::Rot3(state_in.rot.normalized().toRotationMatrix()), p_gnss->priorposNoise);
             gtsam::PriorFactor<gtsam::Vector4> init_dt(B(0), gtsam::Vector4(offline_init_vec[5], offline_init_vec[6], offline_init_vec[7], offline_init_vec[8]), p_gnss->priordtNoise);
             gtsam::PriorFactor<gtsam::Vector1> init_ddt(C(0), gtsam::Vector1(offline_init_vec[4]), p_gnss->priorddtNoise);
             init_vel_bias_vector.block<3,1>(0,0) = state_out.pos;
@@ -363,7 +363,7 @@ void set_gnss_offline_init(bool nolidar_)
             init_vel_bias_vector.block<3,1>(6,0) = state_out.ba;
             init_vel_bias_vector.block<3,1>(9,0) = state_out.bg;
             gtsam::PriorFactor<gtsam::Vector12> init_vel_bias(F(0), gtsam::Vector12(init_vel_bias_vector), p_gnss->priorposNoise);
-            p_gnss->initialEstimate.insert(R(0), gtsam::Rot3(state_out.rot));
+            p_gnss->initialEstimate.insert(R(0), gtsam::Rot3(state_out.rot.normalized().toRotationMatrix()));
             p_gnss->state_const_ = state_out;
         
             p_gnss->gtSAMgraph.add(init_rot);

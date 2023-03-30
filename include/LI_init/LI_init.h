@@ -99,7 +99,7 @@ struct Angular_Vel_Cost_only_Rot {
         Eigen::Matrix<T, 3, 1> IMU_ang_vel_T = IMU_ang_vel.cast<T>();
         Eigen::Matrix<T, 3, 1> Lidar_ang_vel_T = Lidar_ang_vel.cast<T>();
         Eigen::Quaternion<T> q_LI{q[0], q[1], q[2], q[3]};
-        Eigen::Matrix<T, 3, 3> R_LI = q_LI.toRotationMatrix();  //Rotation
+        Eigen::Matrix<T, 3, 3> R_LI = q_LI.normalized().toRotationMatrix();  //Rotation
         Eigen::Matrix<T, 3, 1> resi = R_LI * Lidar_ang_vel_T - IMU_ang_vel_T;
         residual[0] = resi[0];
         residual[1] = resi[1];
@@ -133,7 +133,7 @@ struct Angular_Vel_Cost {
 
         //Unknown Parameters, needed to be estimated
         Eigen::Quaternion<T> q_LI{q[0], q[1], q[2], q[3]};
-        Eigen::Matrix<T, 3, 3> R_LI = q_LI.toRotationMatrix();  //Rotation
+        Eigen::Matrix<T, 3, 3> R_LI = q_LI.normalized().toRotationMatrix();  //Rotation
         Eigen::Matrix<T, 3, 1> bias_g{b_g[0], b_g[1], b_g[2]};  //Bias of gyroscope
         T td{t[0]};                                             //Time lag (IMU wtr Lidar)
 
@@ -174,7 +174,7 @@ struct Linear_acc_Cost {
 
         //Unknown Parameters, needed to be estimated
         Eigen::Quaternion<T> q_GL0{q[0], q[1], q[2], q[3]};
-        Eigen::Matrix<T, 3, 3> R_GL0 = q_GL0.toRotationMatrix();   //Rotation from Gravitational to First Lidar frame
+        Eigen::Matrix<T, 3, 3> R_GL0 = q_GL0.normalized().toRotationMatrix();   //Rotation from Gravitational to First Lidar frame
         Eigen::Matrix<T, 3, 1> bias_aL{b_a[0], b_a[1], b_a[2]};    //Bias of Linear acceleration
         Eigen::Matrix<T, 3, 1> T_IL{trans[0], trans[1], trans[2]}; //Translation of I-L (IMU wtr Lidar)
 

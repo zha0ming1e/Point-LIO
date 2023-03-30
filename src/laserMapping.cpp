@@ -140,11 +140,11 @@ void lasermap_fov_segment()
     V3D pos_LiD;
     if (use_imu_as_input)
     {
-        pos_LiD = state_in.pos + state_in.rot * Lidar_T_wrt_IMU;
+        pos_LiD = state_in.pos + state_in.rot.normalized().toRotationMatrix() * Lidar_T_wrt_IMU;
     }
     else
     {
-        pos_LiD = state_out.pos + state_out.rot * Lidar_T_wrt_IMU;
+        pos_LiD = state_out.pos + state_out.rot.normalized().toRotationMatrix() * Lidar_T_wrt_IMU;
     }
     if (!Localmap_Initialized){
         for (int i = 0; i < 3; i++){
@@ -743,7 +743,7 @@ int main(int argc, char** argv)
  
             if (!p_imu->LI_init_done && !data_accum_finished && data_accum_start) {
                 //Push Lidar's Angular velocity and linear velocity
-                Init_LI->push_Lidar_CalibState(p_imu->state_LI_Init.rot.toRotationMatrix(), p_imu->state_LI_Init.bg, p_imu->state_LI_Init.vel, lidar_end_time);
+                Init_LI->push_Lidar_CalibState(p_imu->state_LI_Init.rot.normalized().toRotationMatrix(), p_imu->state_LI_Init.bg, p_imu->state_LI_Init.vel, lidar_end_time);
                 //Data Accumulation Sufficience Appraisal
                 data_accum_finished = Init_LI->data_sufficiency_assess(Jaco_rot, frame_num_init, p_imu->state_LI_Init.bg,
                                                                        orig_odom_freq, cut_frame_num);
@@ -931,7 +931,7 @@ int main(int argc, char** argv)
                                         time_predict_last_const = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                                         time_update_last = time_predict_last_const;
                                         state_out = kf_output.x_;
-                                        state_out.rot = Rot_gnss_init * M3D(state_out.rot);
+                                        state_out.rot = Rot_gnss_init * state_out.rot.normalized().toRotationMatrix();
                                         state_out.pos = Rot_gnss_init * state_out.pos;
                                         state_out.vel = Rot_gnss_init * state_out.vel;
                                         p_gnss->processGNSS(gnss_cur, state_out);
@@ -1056,7 +1056,7 @@ int main(int argc, char** argv)
                                 time_predict_last_const = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                                 time_update_last = time_predict_last_const;
                                 state_out = kf_output.x_;
-                                state_out.rot = Rot_gnss_init * M3D(kf_output.x_.rot);
+                                state_out.rot = Rot_gnss_init * kf_output.x_.rot.normalized().toRotationMatrix();
                                 state_out.pos = Rot_gnss_init * kf_output.x_.pos;
                                 state_out.vel = Rot_gnss_init * kf_output.x_.vel;
                                 p_gnss->processGNSS(gnss_cur, state_out);
@@ -1299,14 +1299,14 @@ int main(int argc, char** argv)
                                     {
                                         Eigen::Matrix3d R_enu_local_;
                                         R_enu_local_ = Eigen::AngleAxisd(p_gnss->yaw_enu_local, Eigen::Vector3d::UnitZ());
-                                        state_out.pos = p_gnss->isamCurrentEstimate.at<gtsam::Vector12>(F(p_gnss->frame_num-1)).segment<3>(0); // p_gnss->anc_ecef - p_gnss->R_ecef_enu * R_enu_local_ * state_const.rot_end * p_gnss->Tex_imu_r;
-                                        state_out.rot = p_gnss->isamCurrentEstimate.at<gtsam::Rot3>(R(p_gnss->frame_num-1)).matrix(); // p_gnss->R_ecef_enu * R_enu_local_ * state_const.rot_end;
-                                        state_out.vel = p_gnss->isamCurrentEstimate.at<gtsam::Vector12>(F(p_gnss->frame_num-1)).segment<3>(3); // p_gnss->R_ecef_enu * R_enu_local_ * state_const.vel_end; // Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
-                                        state_out.ba = Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
-                                        state_out.bg = Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
-                                        state_out.omg = Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
-                                        state_out.gravity = p_gnss->R_ecef_enu * state_out.gravity; // * R_enu_local_ 
-                                        state_out.acc = state_out.rot.conjugate() * (-state_out.gravity); // R_ecef_enu * state.vel_end;
+                                        kf_output.x_.pos = p_gnss->isamCurrentEstimate.at<gtsam::Vector12>(F(p_gnss->frame_num-1)).segment<3>(0); // p_gnss->anc_ecef - p_gnss->R_ecef_enu * R_enu_local_ * state_const.rot_end * p_gnss->Tex_imu_r;
+                                        kf_output.x_.rot = p_gnss->isamCurrentEstimate.at<gtsam::Rot3>(R(p_gnss->frame_num-1)).matrix(); // p_gnss->R_ecef_enu * R_enu_local_ * state_const.rot_end;
+                                        kf_output.x_.vel = p_gnss->isamCurrentEstimate.at<gtsam::Vector12>(F(p_gnss->frame_num-1)).segment<3>(3); // p_gnss->R_ecef_enu * R_enu_local_ * state_const.vel_end; // Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
+                                        kf_output.x_.ba = Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
+                                        kf_output.x_.bg = Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
+                                        kf_output.x_.omg = Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
+                                        kf_output.x_.gravity = p_gnss->R_ecef_enu * kf_output.x_.gravity; // * R_enu_local_ 
+                                        kf_output.x_.acc = kf_output.x_.rot.normalized().toRotationMatrix().transpose() * (-kf_output.x_.gravity); // R_ecef_enu * state.vel_end;
                                         
                                         kf_output.P_ = MD(24,24)::Identity() * INIT_COV;
                                     }
@@ -1466,7 +1466,7 @@ int main(int argc, char** argv)
                                     kf_input.predict(dt, Q_input, input_in, true, false);
                                     t_last = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                                     state_in = kf_input.x_;
-                                    state_in.rot = Rot_gnss_init * state_in.rot;
+                                    state_in.rot = Rot_gnss_init * state_in.rot.normalized().toRotationMatrix();
                                     state_in.pos = Rot_gnss_init * state_in.pos;
                                     state_in.vel = Rot_gnss_init * state_in.vel;
                                     p_gnss->processGNSS(gnss_cur, state_in, input_in.gyro);
@@ -1576,7 +1576,7 @@ int main(int argc, char** argv)
                             kf_input.predict(dt, Q_input, input_in, true, false); 
                             t_last = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                             state_in = kf_input.x_;
-                            state_in.rot = Rot_gnss_init * state_in.rot;
+                            state_in.rot = Rot_gnss_init * state_in.rot.normalized().toRotationMatrix();
                             state_in.pos = Rot_gnss_init * state_in.pos;
                             state_in.vel = Rot_gnss_init * state_in.vel;
                             p_gnss->processGNSS(gnss_cur, state_in, input_in.gyro);
@@ -1814,15 +1814,14 @@ int main(int argc, char** argv)
                                 kf_input.predict(dt, Q_input, input_in, true, false);
                                 t_last = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                                 p_gnss->processGNSS(gnss_cur, kf_input.x_, input_in.gyro);
-                                cout << "check gnss ready:" << p_gnss->gnss_ready << ";" << kf_input.x_.gravity.transpose() << ";" << (kf_input.x_.rot * input_in.acc).transpose() << endl;
                                 if (p_gnss->gnss_ready)
                                 {
                                     if (nolidar)
                                     {
                                         Eigen::Matrix3d R_enu_local_;
                                         R_enu_local_ = Eigen::AngleAxisd(p_gnss->yaw_enu_local, Eigen::Vector3d::UnitZ());
-                                        kf_input.x_.pos = p_gnss->anc_ecef - p_gnss->R_ecef_enu * R_enu_local_ * kf_input.x_.rot.toRotationMatrix() * p_gnss->Tex_imu_r;
-                                        kf_input.x_.rot = p_gnss->R_ecef_enu * R_enu_local_ * kf_input.x_.rot.toRotationMatrix();
+                                        kf_input.x_.pos = p_gnss->anc_ecef - p_gnss->R_ecef_enu * R_enu_local_ * kf_input.x_.rot.normalized().toRotationMatrix() * p_gnss->Tex_imu_r;
+                                        kf_input.x_.rot = p_gnss->R_ecef_enu * R_enu_local_ * kf_input.x_.rot.normalized().toRotationMatrix();
                                         kf_input.x_.vel = p_gnss->R_ecef_enu * R_enu_local_ * kf_input.x_.vel; //Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
                                         kf_input.x_.ba = Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
                                         kf_input.x_.bg = Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
@@ -1936,7 +1935,7 @@ int main(int argc, char** argv)
                         if (!GNSS_ENABLE)
                         {
                             Eigen::Matrix3d R_enu_local_;
-                            Eigen::Vector3d pos_r = kf_output.x_.rot * p_gnss->Tex_imu_r + kf_output.x_.pos;
+                            Eigen::Vector3d pos_r = kf_output.x_.rot.normalized().toRotationMatrix() * p_gnss->Tex_imu_r + kf_output.x_.pos;
                             Eigen::Vector3d anc;
                             anc << offline_init_vec[0], offline_init_vec[1], offline_init_vec[2];
                             R_enu_local_ = ecef2rotation(anc) * Eigen::AngleAxisd(offline_init_vec[3], Eigen::Vector3d::UnitZ()); 
@@ -1953,7 +1952,7 @@ int main(int argc, char** argv)
                         if (!GNSS_ENABLE)
                         {
                             Eigen::Matrix3d R_enu_local_;
-                            Eigen::Vector3d pos_r = kf_input.x_.rot * p_gnss->Tex_imu_r + kf_input.x_.pos;
+                            Eigen::Vector3d pos_r = kf_input.x_.rot.normalized().toRotationMatrix() * p_gnss->Tex_imu_r + kf_input.x_.pos;
                             Eigen::Vector3d anc;
                             anc << offline_init_vec[0], offline_init_vec[1], offline_init_vec[2];
                             R_enu_local_ = ecef2rotation(anc) * Eigen::AngleAxisd(offline_init_vec[3], Eigen::Vector3d::UnitZ()); 

@@ -174,7 +174,7 @@ void ImuProcess::Forward_propagation_without_imu(const MeasureGroup &meas, Point
       V3D P_j(it_pcl->x, it_pcl->y, it_pcl->z);
       // Using rotation and translation to un-distort points
       V3D p_jk;
-      p_jk = - state_LI_Init.rot.toRotationMatrix().transpose() * state_LI_Init.vel * dt_j;
+      p_jk = - state_LI_Init.rot.normalized().toRotationMatrix().transpose() * state_LI_Init.vel * dt_j;
 
       V3D P_compensate =  R_jk * P_j + p_jk;
 

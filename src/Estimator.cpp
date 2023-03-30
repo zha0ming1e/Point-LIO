@@ -90,8 +90,8 @@ Eigen::Matrix<double, 18, 18> df_dx_input(state_input &s, const input_ikfom &in)
 	in.acc.boxminus(acc_, s.ba);
 	vect3 omega;
 	in.gyro.boxminus(omega, s.bg);
-	cov.template block<3, 3>(6, 3) = -s.rot.toRotationMatrix()*MTK::hat(acc_);
-	cov.template block<3, 3>(6, 12) = -s.rot.toRotationMatrix();
+	cov.template block<3, 3>(6, 3) = -s.rot.normalized().toRotationMatrix()*MTK::hat(acc_);
+	cov.template block<3, 3>(6, 12) = -s.rot.normalized().toRotationMatrix();
 	// Eigen::Matrix<state_ikfom::scalar, 2, 1> vec = Eigen::Matrix<state_ikfom::scalar, 2, 1>::Zero();
 	// Eigen::Matrix<state_ikfom::scalar, 3, 2> grav_matrix;
 	// s.S2_Mx(grav_matrix, vec, 21);
@@ -104,8 +104,8 @@ Eigen::Matrix<double, 24, 24> df_dx_output(state_output &s, const input_ikfom &i
 {
 	Eigen::Matrix<double, 24, 24> cov = Eigen::Matrix<double, 24, 24>::Zero();
 	cov.template block<3, 3>(0, 6) = Eigen::Matrix3d::Identity();
-	cov.template block<3, 3>(6, 3) = -s.rot.toRotationMatrix()*MTK::hat(s.acc);
-	cov.template block<3, 3>(6, 12) = s.rot.toRotationMatrix();
+	cov.template block<3, 3>(6, 3) = -s.rot.normalized().toRotationMatrix()*MTK::hat(s.acc);
+	cov.template block<3, 3>(6, 12) = s.rot.normalized().toRotationMatrix();
 	// Eigen::Matrix<state_ikfom::scalar, 2, 1> vec = Eigen::Matrix<state_ikfom::scalar, 2, 1>::Zero();
 	// Eigen::Matrix<state_ikfom::scalar, 3, 2> grav_matrix;
 	// s.S2_Mx(grav_matrix, vec, 21);
@@ -278,7 +278,6 @@ void h_model_output(state_output &s, esekfom::dyn_share_modified<double> &ekfom_
 				M3D point_crossmat = crossmat_list[idx+j+1];
 				V3D C(s.rot.conjugate() * norm_vec);
 				V3D A(point_crossmat * C);
-				// V3D A(point_crossmat * state.rot_end.transpose() * norm_vec);
 				ekfom_data.h_x.block<1, 6>(m, 0) << norm_vec(0), norm_vec(1), norm_vec(2), VEC_FROM_ARRAY(A); //, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
 			}
 			ekfom_data.z(m) = -norm_vec(0) * feats_down_world->points[idx+j+1].x -norm_vec(1) * feats_down_world->points[idx+j+1].y -norm_vec(2) * feats_down_world->points[idx+j+1].z-normvec->points[j].intensity;
@@ -378,11 +377,11 @@ void pointBodyToWorld(PointType const * const pi, PointType * const po)
 	{
 		if (!use_imu_as_input)
 		{
-			p_global = kf_output.x_.rot * (Lidar_R_wrt_IMU * p_body + Lidar_T_wrt_IMU) + kf_output.x_.pos;
+			p_global = kf_output.x_.rot.normalized().toRotationMatrix() * (Lidar_R_wrt_IMU * p_body + Lidar_T_wrt_IMU) + kf_output.x_.pos;
 		}
 		else
 		{
-			p_global = kf_input.x_.rot * (Lidar_R_wrt_IMU * p_body + Lidar_T_wrt_IMU) + kf_input.x_.pos;
+			p_global = kf_input.x_.rot.normalized().toRotationMatrix() * (Lidar_R_wrt_IMU * p_body + Lidar_T_wrt_IMU) + kf_input.x_.pos;
 		}
 	}
 
@@ -480,7 +479,7 @@ void LI_Init_update()
 
 				/*** calculate the Measurement Jacobian matrix H ***/
 			
-				V3D G(point_crossmat * p_imu->state_LI_Init.rot.toRotationMatrix().transpose() * norm_vec);
+				V3D G(point_crossmat * p_imu->state_LI_Init.rot.normalized().toRotationMatrix().transpose() * norm_vec);
 				Hsub.row(m_) << VEC_FROM_ARRAY(G), norm_p.x, norm_p.y, norm_p.z; //, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0;                    
 				Hsub_T_R_inv.col(m_) = Hsub.row(m_).transpose() * 100;
 				/*** Measurement: distance to the closest surface/corner ***/
@@ -503,7 +502,7 @@ void LI_Init_update()
 		MD(12, 12) &&K_1 = (H_T_H + p_imu->state_cov.inverse()).inverse();
 		K = K_1.block<12, 6>(0, 0) * Hsub_T_R_inv;
 		Eigen::Matrix<double, 12, 1> vec;
-		vec.block<3,1>(3,0) = Log(p_imu->state_LI_Init.rot.toRotationMatrix().transpose() * state_propagat.rot);
+		vec.block<3,1>(3,0) = Log(p_imu->state_LI_Init.rot.normalized().toRotationMatrix().transpose() * state_propagat.rot);
 		vec.block<3,1>(0,0) = state_propagat.pos - p_imu->state_LI_Init.pos;
 		vec.block<3,1>(6,0) = state_propagat.vel - p_imu->state_LI_Init.vel;
 		vec.block<3,1>(9,0) = state_propagat.bg - p_imu->state_LI_Init.bg;

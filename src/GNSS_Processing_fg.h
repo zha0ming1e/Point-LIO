@@ -2,6 +2,7 @@
 // #ifndef GNSS_PROCESS
 // #define GNSS_PROCESS
 #include <Eigen/Dense>
+#include <Eigen/Geometry>
 #include <Eigen/Core>
 #include <gnss_comm/gnss_constant.hpp>
 #include <gnss_comm/gnss_ros.hpp>

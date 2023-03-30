@@ -846,9 +846,9 @@ void LI_Init_set()
     Lidar_T_wrt_IMU = Init_LI->get_T_LI();
     if (use_imu_as_input)
     {
-        kf_input.x_.pos = -(p_imu->state_LI_Init.rot.toRotationMatrix() * Lidar_R_wrt_IMU.transpose() * Lidar_T_wrt_IMU +
+        kf_input.x_.pos = -(p_imu->state_LI_Init.rot.normalized().toRotationMatrix() * Lidar_R_wrt_IMU.transpose() * Lidar_T_wrt_IMU +
                         p_imu->state_LI_Init.pos); //Body frame is IMU frame in Point-LIO mode
-        kf_input.x_.rot = p_imu->state_LI_Init.rot * Lidar_R_wrt_IMU.transpose();
+        kf_input.x_.rot = p_imu->state_LI_Init.rot.normalized().toRotationMatrix() * Lidar_R_wrt_IMU.transpose();
         gravity_lio = Init_LI->get_Grav_L0();
         kf_input.x_.gravity = Init_LI->get_Grav_L0();
         kf_input.x_.bg = Init_LI->get_gyro_bias();
@@ -856,14 +856,14 @@ void LI_Init_set()
     }
     else
     {
-        kf_output.x_.pos = -1 * (p_imu->state_LI_Init.rot.toRotationMatrix() * Lidar_R_wrt_IMU.transpose() * Lidar_T_wrt_IMU +
+        kf_output.x_.pos = -1 * (p_imu->state_LI_Init.rot.normalized().toRotationMatrix() * Lidar_R_wrt_IMU.transpose() * Lidar_T_wrt_IMU +
                         p_imu->state_LI_Init.pos); //Body frame is IMU frame in Point-LIO mode
-        kf_output.x_.rot = p_imu->state_LI_Init.rot * Lidar_R_wrt_IMU.transpose();
+        kf_output.x_.rot = p_imu->state_LI_Init.rot.normalized().toRotationMatrix() * Lidar_R_wrt_IMU.transpose();
         gravity_lio = Init_LI->get_Grav_L0();
         kf_output.x_.gravity = Init_LI->get_Grav_L0();
         kf_output.x_.bg = Init_LI->get_gyro_bias();
         kf_output.x_.ba = Init_LI->get_acc_bias();
-        kf_output.x_.acc = - kf_output.x_.rot.toRotationMatrix().transpose() * gravity_lio;
+        kf_output.x_.acc = - kf_output.x_.rot.normalized().toRotationMatrix().transpose() * gravity_lio;
     }
     {
         // init_map = true;
