@@ -424,10 +424,14 @@ void cout_state_to_file()
             else
             {
                 V3D euler_cur = SO3ToEuler(kf_input.x_.rot); // euler_cur.transpose()
+                Eigen::Vector3d euler_cur_gnss = SO3ToEuler(p_gnss->state_.rot); // euler_cur.transpose()
                 Eigen::Vector3d euler_ext = RotMtoEuler(p_gnss->p_assign->isamCurrentEstimate.at<gtsam::Rot3>(P(0)).matrix()); // euler_cur.transpose()
-                fout_out << setw(20) << t_last - first_imu_time << " " << euler_cur.transpose() << " " << pos_enu.transpose() << " " << kf_input.x_.pos.transpose() \
-                            <<" "<<p_gnss->p_assign->isamCurrentEstimate.at<gtsam::Vector3>(E(0)).transpose()<<" "<<  
-                            euler_ext.segment<2>(0).transpose() << " " <<p_gnss->p_assign->isamCurrentEstimate.at<gtsam::Vector1>(C(p_gnss->frame_num-1))[0]<<" "
+                fout_out << setw(20) << t_last - first_imu_time << " " << euler_cur_gnss.transpose() << " " << pos_enu.transpose() << " " << euler_cur.transpose() \
+                            <<" "<<p_gnss->state_.pos.transpose()<<" "<< \
+                            euler_ext.transpose() << " " \
+                            <<kf_input.x_.pos.transpose()<<" "<<0<<endl;
+                            // <<" "<<p_gnss->p_assign->isamCurrentEstimate.at<gtsam::Vector3>(E(0)).transpose()<<" "<< \
+                            euler_ext.transpose() << " " \
                             <<p_gnss->p_assign->isamCurrentEstimate.at<gtsam::Vector4>(B(p_gnss->frame_num-1)).transpose()<<endl;
             }
         }
@@ -466,10 +470,11 @@ void cout_state_to_file()
             else
             {
                 Eigen::Vector3d euler_cur = SO3ToEuler(kf_output.x_.rot); // euler_cur.transpose()
+                Eigen::Vector3d euler_cur_gnss = SO3ToEuler(p_gnss->state_const_.rot); // euler_cur.transpose()
                 Eigen::Vector3d euler_ext = SO3ToEuler(p_gnss->p_assign->isamCurrentEstimate.at<gtsam::Rot3>(P(0)).matrix());
-                fout_out << setw(20) << time_predict_last_const - first_imu_time << " " << euler_cur.transpose() << " " << pos_enu.transpose() << " " << kf_output.x_.pos.transpose() \
-                            <<" "<<kf_output.x_.omg.transpose()<<" "<<kf_output.x_.acc.transpose()<<" "<<p_gnss->p_assign->isamCurrentEstimate.at<gtsam::Vector3>(E(0)).transpose()<<" "
-                            << euler_ext.segment<2>(0).transpose() << " " <<p_gnss->p_assign->isamCurrentEstimate.at<gtsam::Vector1>(C(p_gnss->frame_num-1))[0]<<" "<<p_gnss->p_assign->isamCurrentEstimate.at<gtsam::Vector4>(B(p_gnss->frame_num-1)).transpose()<<endl;
+                fout_out << setw(20) << time_predict_last_const - first_imu_time << " " << euler_cur_gnss.transpose() << " " << pos_enu.transpose() << " " << euler_cur.transpose() \
+                            <<" "<<p_gnss->state_const_.pos.transpose()<<" "<<kf_output.x_.pos.transpose()<<" "<<p_gnss->p_assign->isamCurrentEstimate.at<gtsam::Vector3>(E(0)).transpose()<<" "
+                            << euler_ext.transpose() << " " <<p_gnss->p_assign->isamCurrentEstimate.at<gtsam::Vector1>(C(p_gnss->frame_num-1))[0]<<" "<<p_gnss->p_assign->isamCurrentEstimate.at<gtsam::Vector4>(B(p_gnss->frame_num-1)).transpose()<<endl;
             }
         }
     }
