@@ -114,7 +114,7 @@ class GNSSAssignment
         void inputEphem(EphemBasePtr ephem_ptr);
         void rinex2iono_params(const std::string &rinex_filepath, std::vector<double> &iono_params);
         void rinex2ephems(const std::string &rinex_filepath, std::map<uint32_t, std::vector<EphemBasePtr>> &sat2ephem_);
-        int freq_idx;
+        int freq_idx_;
         double gnss_psr_std_threshold;
         double gnss_dopp_std_threshold;
         std::map<uint32_t, uint32_t> sat_track_status; //

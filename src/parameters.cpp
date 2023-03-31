@@ -359,7 +359,7 @@ void set_gnss_offline_init(bool nolidar_)
             state_out.gravity = R_ecef_enu * kf_output.x_.gravity; // * R_enu_local_ 
             kf_output.change_x(state_out);
         
-            gtsam::PriorFactor<gtsam::Rot3> init_rot(R(0), gtsam::Rot3(state_in.rot.normalized().toRotationMatrix()), p_gnss->p_assign->priorposNoise);
+            gtsam::PriorFactor<gtsam::Rot3> init_rot(R(0), gtsam::Rot3(state_out.rot.normalized().toRotationMatrix()), p_gnss->p_assign->priorposNoise);
             gtsam::PriorFactor<gtsam::Vector4> init_dt(B(0), gtsam::Vector4(offline_init_vec[5], offline_init_vec[6], offline_init_vec[7], offline_init_vec[8]), p_gnss->p_assign->priordtNoise);
             gtsam::PriorFactor<gtsam::Vector1> init_ddt(C(0), gtsam::Vector1(offline_init_vec[4]), p_gnss->p_assign->priorddtNoise);
             init_vel_bias_vector.block<3,1>(0,0) = state_out.pos;

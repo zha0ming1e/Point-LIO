@@ -258,9 +258,9 @@ void GNSSAssignment::processGNSSBase(const std::vector<ObsPtr> &gnss_meas, std::
       
       if (obs->freqs.empty())    continue;       // no valid signal measurement
       // int 
-      freq_idx = -1;
-      L1_freq(obs, &freq_idx);
-      if (freq_idx < 0)   continue;              // no L1 observation
+      freq_idx_ = -1;
+      L1_freq(obs, &freq_idx_);
+      if (freq_idx_ < 0)   continue;              // no L1 observation
       
       double obs_time = time2sec(obs->time);
       std::map<double, size_t> time2index = sat2time_index.at(obs->sat);
@@ -288,9 +288,9 @@ void GNSSAssignment::processGNSSBase(const std::vector<ObsPtr> &gnss_meas, std::
           continue;
       if (obs->freqs.empty())    continue;       // no valid signal measurement
       
-      freq_idx = -1;
-      L1_freq(obs, &freq_idx);
-      if (freq_idx < 0)   continue;              // no L1 observation
+      freq_idx_ = -1;
+      L1_freq(obs, &freq_idx_);
+      if (freq_idx_ < 0)   continue;              // no L1 observation
       
       double obs_time = time2sec(obs->time);
       std::map<double, size_t> time2index = sat2time_index_rnx.at(obs->sat);
@@ -313,12 +313,12 @@ void GNSSAssignment::processGNSSBase(const std::vector<ObsPtr> &gnss_meas, std::
     }
       const EphemBasePtr &best_ephem = best_ephem_cur;
       // filter by tracking status
-      LOG_IF(FATAL, freq_idx < 0) << "No L1 observation found.\n";
+      LOG_IF(FATAL, freq_idx_ < 0) << "No L1 observation found.\n";
       if (gnss_ready)
       {
-      if (obs->psr_std[freq_idx]  > gnss_psr_std_threshold ||
-          obs->dopp_std[freq_idx] > gnss_dopp_std_threshold) //||
-          // obs->cp_std[freq_idx] * 0.004 > gnss_cp_std_threshold)
+      if (obs->psr_std[freq_idx_]  > gnss_psr_std_threshold ||
+          obs->dopp_std[freq_idx_] > gnss_dopp_std_threshold) //||
+          // obs->cp_std[freq_idx_] * 0.004 > gnss_cp_std_threshold)
       {
           sat_track_status[obs->sat] = 0;
           continue;
@@ -332,9 +332,9 @@ void GNSSAssignment::processGNSSBase(const std::vector<ObsPtr> &gnss_meas, std::
       }
       else
       {
-      if (obs->psr_std[freq_idx]  > gnss_psr_std_threshold / 3 ||
-          obs->dopp_std[freq_idx] > gnss_dopp_std_threshold / 3) //||
-          // obs->cp_std[freq_idx] * 0.004 > gnss_cp_std_threshold)
+      if (obs->psr_std[freq_idx_]  > gnss_psr_std_threshold / 3 ||
+          obs->dopp_std[freq_idx_] > gnss_dopp_std_threshold / 3) //||
+          // obs->cp_std[freq_idx_] * 0.004 > gnss_cp_std_threshold)
       {
           sat_track_status[obs->sat] = 0;
           continue;

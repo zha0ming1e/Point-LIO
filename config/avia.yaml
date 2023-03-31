@@ -47,7 +47,7 @@ mapping:
 
 gnss:
     gnss_enable: true
-    nolidar: true
+    nolidar: false
     quick_init: false
     online_init: true # false is pseudo-proposition, maybe can work when this value is false now: yes
     ephem_from_rinex: false

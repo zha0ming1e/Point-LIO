@@ -140,10 +140,12 @@ void lasermap_fov_segment()
     V3D pos_LiD;
     if (use_imu_as_input)
     {
+        state_in = kf_input.x_;
         pos_LiD = state_in.pos + state_in.rot.normalized().toRotationMatrix() * Lidar_T_wrt_IMU;
     }
     else
     {
+        state_out = kf_output.x_;
         pos_LiD = state_out.pos + state_out.rot.normalized().toRotationMatrix() * Lidar_T_wrt_IMU;
     }
     if (!Localmap_Initialized){
@@ -768,6 +770,7 @@ int main(int argc, char** argv)
                     kf_input.x_.rot.normalize();
                     kf_output.x_.rot = kf_input.x_.rot;
                     kf_output.x_.rot.normalize();
+                    kf_output.x_.acc = rot_init.transpose() * kf_output.x_.acc;
                     if (!p_gnss->gnss_online_init && GNSS_ENABLE)
                     {   
                         // p_gnss->gnss_ready = true;
@@ -1059,10 +1062,10 @@ int main(int argc, char** argv)
                                 time_predict_last_const = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                                 time_update_last = time_predict_last_const;
                                 state_out = kf_output.x_;
-                                state_out.rot = Rot_gnss_init * kf_output.x_.rot.normalized().toRotationMatrix();
+                                state_out.rot = Rot_gnss_init * state_out.rot.normalized().toRotationMatrix();
                                 state_out.rot.normalize();
-                                state_out.pos = Rot_gnss_init * kf_output.x_.pos;
-                                state_out.vel = Rot_gnss_init * kf_output.x_.vel;
+                                state_out.pos = Rot_gnss_init * state_out.pos;
+                                state_out.vel = Rot_gnss_init * state_out.vel;
                                 p_gnss->processGNSS(gnss_cur, state_out);
                             }
                             p_gnss->gnss_msg.pop();
@@ -1196,14 +1199,11 @@ int main(int argc, char** argv)
                                         imu_next = *(imu_deque.front());
                                     }
                                 }
-                                
-                                // sensor_msgs::Imu::Ptr last_imu(new sensor_msgs::Imu(imu_last));
-                                // imu_deque.push_front(last_imu);
                                 break;
                             }
-                            angvel_avr<<imu_next.angular_velocity.x, imu_next.angular_velocity.y, imu_next.angular_velocity.z;
+                            angvel_avr<<imu_last.angular_velocity.x, imu_last.angular_velocity.y, imu_last.angular_velocity.z;
                                             
-                            acc_avr   <<imu_next.linear_acceleration.x, imu_next.linear_acceleration.y, imu_next.linear_acceleration.z;
+                            acc_avr   <<imu_last.linear_acceleration.x, imu_last.linear_acceleration.y, imu_last.linear_acceleration.z;
 
                             imu_upda_cov = true;
                             time_update_last = time_current;
@@ -1261,10 +1261,11 @@ int main(int argc, char** argv)
                                 if (dt_cov > 0.0)
                                 {
                                     kf_output.predict(dt_cov, Q_output, input_in, false, true);
+                                    time_update_last = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                                 }
-                                kf_output.predict(dt_cov, Q_output, input_in, true, false);
-                                p_gnss->pre_integration->push_back(dt, kf_output.x_.acc + kf_output.x_.ba, kf_output.x_.omg + kf_output.x_.bg); // acc_avr, angvel_avr); 
-                                // change to state_const.omg and state_const.acc?
+                                kf_output.predict(dt, Q_output, input_in, true, false);
+                                p_gnss->pre_integration->push_back(dt, kf_output.x_.acc + kf_output.x_.ba, kf_output.x_.omg + kf_output.x_.bg); //acc_avr_norm, angvel_avr); 
+                                // change to state_const.omg and state_const.acc? 
 
                                 time_predict_last_const = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                                 p_gnss->processGNSS(gnss_cur, kf_output.x_);
@@ -1279,7 +1280,6 @@ int main(int argc, char** argv)
                                     }
                                     break; // ?
                                 }
-
                                 if (update_gnss)
                                 {
                                     if (!nolidar)
@@ -1294,8 +1294,9 @@ int main(int argc, char** argv)
                                 if (dt_cov > 0.0)
                                 {
                                     kf_output.predict(dt_cov, Q_output, input_in, false, true);
+                                    time_update_last = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                                 }
-                                kf_output.predict(dt_cov, Q_output, input_in, true, false);
+                                kf_output.predict(dt, Q_output, input_in, true, false);
                                 time_predict_last_const = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                                 p_gnss->processGNSS(gnss_cur, kf_output.x_);
                                 if (p_gnss->gnss_ready)
@@ -1318,7 +1319,6 @@ int main(int argc, char** argv)
                                     }
                                 }
                             }
-                            time_update_last = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                             p_gnss->gnss_msg.pop();
                             if(!p_gnss->gnss_msg.empty())
                             {
@@ -1335,7 +1335,6 @@ int main(int argc, char** argv)
                             break;
                         }
                         double dt = time_current - time_predict_last_const;
-
                         {
                             double dt_cov = time_current - time_update_last;
                             if (dt_cov > 0.0)
@@ -1343,16 +1342,16 @@ int main(int argc, char** argv)
                                 kf_output.predict(dt_cov, Q_output, input_in, false, true);
                                 time_update_last = time_current;
                             }
-                            kf_output.predict(dt_cov, Q_output, input_in, true, false);
+                            kf_output.predict(dt, Q_output, input_in, true, false);
 
-                            p_gnss->pre_integration->push_back(dt, kf_output.x_.acc + kf_output.x_.ba, kf_output.x_.omg + kf_output.x_.bg); // acc_avr, angvel_avr);
+                            p_gnss->pre_integration->push_back(dt, kf_output.x_.acc + kf_output.x_.ba, kf_output.x_.omg + kf_output.x_.bg); // acc_avr_norm, angvel_avr); // 
                         }
 
                         time_predict_last_const = time_current;
 
                         angvel_avr<<imu_next.angular_velocity.x, imu_next.angular_velocity.y, imu_next.angular_velocity.z;
                         acc_avr   <<imu_next.linear_acceleration.x, imu_next.linear_acceleration.y, imu_next.linear_acceleration.z; 
-
+                        acc_avr_norm = acc_avr * G_m_s2 / acc_norm;
                         kf_output.update_iterated_dyn_share_IMU();
                         imu_deque.pop_front();
                         if (imu_deque.empty()) break;
@@ -1369,7 +1368,6 @@ int main(int argc, char** argv)
                     }
                     }
                 }
-                
             }
             else
             {
@@ -1836,7 +1834,6 @@ int main(int argc, char** argv)
                                         kf_input.x_.ba = Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
                                         kf_input.x_.bg = Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
                                         kf_input.x_.gravity = p_gnss->R_ecef_enu * kf_input.x_.gravity; // * R_enu_local_
-                                        // kf_input.change_x(state_in);
                                         kf_input.P_ = MD(18,18)::Identity() * INIT_COV;
                                     }
                                 }
