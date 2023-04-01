@@ -615,10 +615,10 @@ int main(int argc, char** argv)
                 if(imu_en)
                 {
                     // imu_next = *(imu_deque.front());
-                    kf_input.x_.gravity << VEC_FROM_ARRAY(gravity_init);
-                    kf_output.x_.gravity << VEC_FROM_ARRAY(gravity_init);
-                    kf_output.x_.acc << VEC_FROM_ARRAY(gravity_init);
-                    kf_output.x_.acc *= -1; 
+                    kf_input.x_.gravity << VEC_FROM_ARRAY(gravity);
+                    kf_output.x_.gravity << VEC_FROM_ARRAY(gravity);
+                    // kf_output.x_.acc << VEC_FROM_ARRAY(gravity);
+                    // kf_output.x_.acc *= -1; 
 
                     if (!nolidar)
                     {
@@ -643,7 +643,13 @@ int main(int argc, char** argv)
                     kf_output.x_.acc *= -1; 
                     p_imu->imu_need_init_ = false;
                     p_imu->after_imu_init_ = true;
-                }           
+                }  
+                if (!p_gnss->gnss_online_init && GNSS_ENABLE)
+                {   
+                    // p_gnss->gnss_ready = true;
+                    // p_gnss->gtSAMgraphMade = true;
+                    set_gnss_offline_init(false);
+                }         
             }
 
             double t0,t1,t2,t3,t4,t5,match_start, solve_start;
@@ -679,11 +685,7 @@ int main(int argc, char** argv)
             }
 
             p_imu->Process(Measures, feats_undistort);
-            
-            // if (feats_undistort->empty() || feats_undistort == NULL)
-            // {
-            //     continue;
-            // }
+         
             /*** initialize the map kdtree ***/
             if(!init_map && !nolidar)
             {
@@ -764,19 +766,14 @@ int main(int argc, char** argv)
             {
                 if (!p_imu->imu_need_init_)
                 { 
+                    V3D tmp_gravity = - p_imu->mean_acc / acc_norm * G_m_s2;
+                    // V3D tmp_gravity << VEC_FROM_ARRAY(gravity_init);
                     M3D rot_init;
-                    p_imu->Set_init(rot_init);  
-                    kf_input.x_.rot = rot_init;
+                    p_imu->Set_init(tmp_gravity, rot_init);  
+                    kf_input.x_.rot = kf_output.x_.rot = rot_init;
                     kf_input.x_.rot.normalize();
-                    kf_output.x_.rot = kf_input.x_.rot;
                     kf_output.x_.rot.normalize();
-                    kf_output.x_.acc = rot_init.transpose() * kf_output.x_.acc;
-                    if (!p_gnss->gnss_online_init && GNSS_ENABLE)
-                    {   
-                        // p_gnss->gnss_ready = true;
-                        // p_gnss->gtSAMgraphMade = true;
-                        set_gnss_offline_init(false);
-                    }
+                    kf_output.x_.acc = - rot_init.transpose() * kf_output.x_.gravity;
                 }
                 continue;
             }

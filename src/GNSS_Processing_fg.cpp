@@ -731,7 +731,8 @@ bool GNSSProcess::Evaluate(state_input &state, Eigen::Vector3d &omg)
     init_vel_bias_vector.block<3,1>(9,0) = state.bg;
     p_assign->initialEstimate.insert(F(frame_num), gtsam::Vector12(init_vel_bias_vector));
     p_assign->initialEstimate.insert(R(frame_num), gtsam::Rot3(state.rot.normalized().toRotationMatrix())); 
-  }                    
+  }              
+  rot_pos = state.rot.normalized().toRotationMatrix();
   if (AddFactor(rel_rot, rel_pos, rel_vel, state.gravity, delta_t, time_current, state.ba, state.bg, omg))
   {
     frame_num ++;
@@ -865,7 +866,8 @@ bool GNSSProcess::Evaluate(state_output &state)
     init_vel_bias_vector.block<3,1>(9,0) = state.bg;
     p_assign->initialEstimate.insert(F(frame_num), gtsam::Vector12(init_vel_bias_vector));
     p_assign->initialEstimate.insert(R(frame_num), gtsam::Rot3(state.rot.normalized().toRotationMatrix())); 
-  }                    
+  }              
+  rot_pos = state.rot.normalized().toRotationMatrix();
   if (AddFactor(rel_rot, rel_pos, rel_vel, state.gravity, delta_t, time_current, state.ba, state.bg, state.omg))
   {
     frame_num ++;
@@ -1150,12 +1152,14 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
 
     rcv_sys[sys_idx] = true;
     if (!nolidar)
-    {   
-      p_assign->gtSAMgraph.add(glio::GnssPsrDoppFactor(R(frame_num), A(frame_num), B(frame_num), C(frame_num), E(0), P(0), values, sys_idx, hat_omg_T, p_assign->robustpsrdoppNoise));
+    { 
+      // p_assign->gtSAMgraph.add(glio::GnssPsrDoppFactor(R(frame_num), A(frame_num), B(frame_num), C(frame_num), E(0), P(0), values, sys_idx, hat_omg_T, p_assign->robustpsrdoppNoise));
+      p_assign->gtSAMgraph.add(glio::GnssPsrDoppFactorPos(A(frame_num), B(frame_num), C(frame_num), E(0), P(0), values, sys_idx, rot_pos, hat_omg_T, p_assign->robustpsrdoppNoise));
     }
     else
     {    
-      p_assign->gtSAMgraph.add(glio::GnssPsrDoppFactorNolidar(R(frame_num), F(frame_num), B(frame_num), C(frame_num), values, sys_idx, hat_omg_T, p_assign->robustpsrdoppNoise)); // not work
+      // p_assign->gtSAMgraph.add(glio::GnssPsrDoppFactorNolidar(R(frame_num), F(frame_num), B(frame_num), C(frame_num), values, sys_idx, hat_omg_T, p_assign->robustpsrdoppNoise)); // not work
+      p_assign->gtSAMgraph.add(glio::GnssPsrDoppFactorNolidarPos(F(frame_num), B(frame_num), C(frame_num), values, sys_idx, hat_omg_T, rot_pos, p_assign->robustpsrdoppNoise)); // not work
     }
     factor_id_cur.push_back(id_accumulate);
     id_accumulate += 1;
@@ -1208,11 +1212,15 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
     values[18] = meas_cp_best - meas_cp[j] - meas_sats[j]; values[19] = cp_weight; 
     if (!nolidar)
     {
-      p_assign->gtSAMgraph.add(glio::GnssCpFactor(E(0), P(0), R(meas_index_sats[j]), A(meas_index_sats[j]), R(frame_num), A(frame_num), values, p_assign->robustcpNoise));
+      // p_assign->gtSAMgraph.add(glio::GnssCpFactor(E(0), P(0), R(meas_index_sats[j]), A(meas_index_sats[j]), R(frame_num), A(frame_num), values, p_assign->robustcpNoise));
+      Eigen::Matrix3d rot_before = p_assign->isamCurrentEstimate.at<gtsam::Rot3>(R(meas_index_sats[j])).matrix();
+      p_assign->gtSAMgraph.add(glio::GnssCpFactorPos(E(0), P(0), A(meas_index_sats[j]), A(frame_num), values, rot_before, rot_pos, p_assign->robustcpNoise));
     }
     else
     {
-      p_assign->gtSAMgraph.add(glio::GnssCpFactorNolidar(R(meas_index_sats[j]), F(meas_index_sats[j]), R(frame_num), F(frame_num), values, p_assign->robustcpNoise)); // not work
+      // p_assign->gtSAMgraph.add(glio::GnssCpFactorNolidar(R(meas_index_sats[j]), F(meas_index_sats[j]), R(frame_num), F(frame_num), values, p_assign->robustcpNoise)); // not work
+      Eigen::Matrix3d rot_before = p_assign->isamCurrentEstimate.at<gtsam::Rot3>(R(meas_index_sats[j])).matrix();
+      p_assign->gtSAMgraph.add(glio::GnssCpFactorNolidarPos(F(meas_index_sats[j]), F(frame_num), values, rot_before, rot_pos, p_assign->robustcpNoise)); // not work
     }
     // factor_id_cur.push_back(id_accumulate);
     p_assign->factor_id_frame[meas_index_sats[j]-frame_delete].push_back(id_accumulate);

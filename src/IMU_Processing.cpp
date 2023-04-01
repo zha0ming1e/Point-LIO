@@ -59,11 +59,11 @@ void ImuProcess::Reset()
   time_last_scan = 0.0;
 }
 
-void ImuProcess::Set_init(Eigen::Matrix3d &rot)
+void ImuProcess::Set_init(Eigen::Vector3d &tmp_gravity, Eigen::Matrix3d &rot)
 {
   /** 1. initializing the gravity, gyro bias, acc and gyro covariance
    ** 2. normalize the acceleration measurenments to unit gravity **/
-  V3D tmp_gravity = - mean_acc / mean_acc.norm() * G_m_s2; // state_gravity;
+  // V3D tmp_gravity = - mean_acc / mean_acc.norm() * G_m_s2; // state_gravity;
   M3D hat_grav;
   hat_grav << 0.0, gravity_(2), -gravity_(1),
               -gravity_(2), 0.0, gravity_(0),
@@ -215,7 +215,7 @@ void ImuProcess::Process(const MeasureGroup &meas, PointCloudXYZI::Ptr cur_pcl_u
           ROS_INFO("IMU Initializing: %.1f %%", 100.0);
           imu_need_init_ = false;
         }
-        *cur_pcl_un_ = *(meas.lidar);
+        // *cur_pcl_un_ = *(meas.lidar);
       }
       return;
     }
@@ -225,7 +225,7 @@ void ImuProcess::Process(const MeasureGroup &meas, PointCloudXYZI::Ptr cur_pcl_u
   }
   else
   {
-      *cur_pcl_un_ = *(meas.lidar);
-      return;
+    *cur_pcl_un_ = *(meas.lidar);
+    return;
   }
 }

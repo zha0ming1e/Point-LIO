@@ -874,7 +874,7 @@ void LI_Init_set()
     }
     if (GNSS_ENABLE)
     {
-        p_imu->Set_init(Rot_gnss_init); // gravity_lio, 
+        p_imu->Set_init(gravity_lio, Rot_gnss_init); // 
         p_gnss->Rot_gnss_init = Rot_gnss_init;
         cout << "check Rot init:" << Rot_gnss_init << endl;
         // delete ikdtree.Root_Node;

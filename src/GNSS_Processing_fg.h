@@ -103,6 +103,7 @@ class GNSSProcess
     Eigen::Vector3d sv_vel;
     double svdt, svddt, tgd;
     double pr_uura, dp_uura;
+    Eigen::Matrix3d rot_pos;
 };
 
 // # endif

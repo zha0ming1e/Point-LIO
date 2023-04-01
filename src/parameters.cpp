@@ -23,7 +23,7 @@ double vel_cov, acc_cov_input, gyr_cov_input;
 double gyr_cov_output, acc_cov_output, b_gyr_cov, b_acc_cov;
 double imu_meas_acc_cov, imu_meas_omg_cov; 
 int    lidar_type, pcd_save_interval;
-std::vector<double> gravity_init;
+std::vector<double> gravity_init, gravity;
 std::vector<double> extrinT, extrinT_gnss(3, 0.0), offline_init_vec(9, 0.0);
 std::vector<double> extrinR, extrinR_gnss(9, 0.0);
 bool   runtime_pos_log, pcd_save_en, path_en, extrinsic_est_en = true;
@@ -102,7 +102,8 @@ void readParameters(ros::NodeHandle &nh)
   nh.param<int>("preprocess/scan_rate", p_pre->SCAN_RATE, 10);
   nh.param<int>("preprocess/timestamp_unit", p_pre->time_unit, 1);
   nh.param<double>("mapping/match_s", match_s, 81);
-  nh.param<std::vector<double>>("mapping/gravity", gravity_init, std::vector<double>());
+  nh.param<std::vector<double>>("mapping/gravity", gravity, std::vector<double>());
+  nh.param<std::vector<double>>("mapping/gravity_init", gravity_init, std::vector<double>());
   nh.param<std::vector<double>>("mapping/extrinsic_T", extrinT, std::vector<double>());
   nh.param<std::vector<double>>("mapping/extrinsic_R", extrinR, std::vector<double>());
   nh.param<bool>("odometry/publish_odometry_without_downsample", publish_odometry_without_downsample, false);
@@ -136,7 +137,7 @@ void readParameters(ros::NodeHandle &nh)
         nh.param<double>("initialization/data_accum_length", Init_LI->data_accum_length, 300);
         p_imu->LI_init_done = false;
     }
-    p_imu->gravity_ << VEC_FROM_ARRAY(gravity_init);
+    p_imu->gravity_ << VEC_FROM_ARRAY(gravity);
     nh.param<bool>("gnss/gnss_enable", GNSS_ENABLE, false);
     nh.param<bool>("gnss/outlier_rejection", p_gnss->p_assign->outlier_rej, false);
     cout << "gnss enable:" << GNSS_ENABLE << endl;
@@ -150,7 +151,7 @@ void readParameters(ros::NodeHandle &nh)
         nh.param<string>("gnss/rtk_lla_topic",rtk_lla_topic,"/ublox_driver/receiver_lla");
         nh.param<string>("gnss/gnss_tp_info_topic",gnss_tp_info_topic,"/ublox_driver/time_pulse_info");
         nh.param<vector<double>>("gnss/gnss_iono_default_parameters",default_gnss_iono_params,vector<double>());
-        p_gnss->gravity_init << VEC_FROM_ARRAY(gravity_init);
+        p_gnss->gravity_init << VEC_FROM_ARRAY(gravity);
         nh.param<bool>("gnss/gnss_local_online_sync",gnss_local_online_sync,1);
         if (gnss_local_online_sync)
         {

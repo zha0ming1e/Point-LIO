@@ -38,7 +38,7 @@ class ImuProcess
   void Process(const MeasureGroup &meas, PointCloudXYZI::Ptr pcl_un_);
   void set_gyr_cov(const V3D &scaler);
   void set_acc_cov(const V3D &scaler);
-  void Set_init(Eigen::Matrix3d &rot);
+  void Set_init(Eigen::Vector3d &tmp_gravity, Eigen::Matrix3d &rot);
   void pointBodyToWorld_li_init(PointType const * const pi, PointType * const po);
 
   state_input state_LI_Init;

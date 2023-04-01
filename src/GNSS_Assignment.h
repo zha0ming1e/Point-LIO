@@ -24,16 +24,20 @@
 #include <gtsam/nonlinear/ISAM2.h>
 
 #include <gnss_factor/gnss_cp_factor.hpp>
+#include <gnss_factor/gnss_cp_factor_pos.hpp>
 #include <gnss_factor/gnss_lio_hard_factor.hpp>
 #include <gnss_factor/gnss_lio_gravity_factor.hpp>
 #include <gnss_factor/gnss_cp_factor_nolidar.hpp>
+#include <gnss_factor/gnss_cp_factor_nolidar_pos.hpp>
 #include <gnss_factor/gnss_ddt_smooth_factor.hpp>
 #include <gnss_factor/gnss_dt_ddt_factor.hpp>
 #include <gnss_factor/gnss_lio_factor.hpp>
 #include <gnss_factor/gnss_lio_factor_nolidar.hpp>
 #include <gnss_factor/gnss_prior_factor.hpp>
 #include <gnss_factor/gnss_psr_dopp_factor.hpp>
+#include <gnss_factor/gnss_psr_dopp_factor_pos.hpp>
 #include <gnss_factor/gnss_psr_dopp_factor_nolidar.hpp>
+#include <gnss_factor/gnss_psr_dopp_factor_nolidar_pos.hpp>
 
 using namespace gnss_comm;
 
