@@ -570,6 +570,7 @@ int main(int argc, char** argv)
             {
                 ROS_WARN("reset when rosbag play back");
                 p_imu->Reset();
+                feats_undistort.reset(new PointCloudXYZI());
                 if (use_imu_as_input)
                 {
                     state_in = kf_input.get_x();
@@ -663,6 +664,7 @@ int main(int argc, char** argv)
             lasermap_fov_segment();
             /*** downsample the feature points in a scan ***/
             t1 = omp_get_wtime();
+            p_imu->Process(Measures, feats_undistort);
             if(space_down_sample)
             {
                 downSizeFilterSurf.setInputCloud(feats_undistort);
@@ -683,9 +685,22 @@ int main(int argc, char** argv)
             {
                 time_seq.clear();
             }
-
-            p_imu->Process(Measures, feats_undistort);
          
+            if (!p_imu->UseLIInit && !p_imu->after_imu_init_)
+            {
+                if (!p_imu->imu_need_init_)
+                { 
+                    V3D tmp_gravity = - p_imu->mean_acc / acc_norm * G_m_s2;
+                    // V3D tmp_gravity << VEC_FROM_ARRAY(gravity_init);
+                    M3D rot_init;
+                    p_imu->Set_init(tmp_gravity, rot_init);  
+                    kf_input.x_.rot = kf_output.x_.rot = rot_init;
+                    kf_input.x_.rot.normalize();
+                    kf_output.x_.rot.normalize();
+                    kf_output.x_.acc = - rot_init.transpose() * kf_output.x_.gravity;
+                }
+                continue;
+            }
             /*** initialize the map kdtree ***/
             if(!init_map && !nolidar)
             {
@@ -738,7 +753,6 @@ int main(int argc, char** argv)
                 frame_num_init ++;
             }
 
-
             if (!p_imu->LI_init_done && !data_accum_start && p_imu->state_LI_Init.pos.norm() > 0.05) {
                 printf(BOLDCYAN "[Initialization] Movement detected, data accumulation starts.\n\n\n\n\n" RESET);
                 data_accum_start = true;
@@ -762,19 +776,8 @@ int main(int argc, char** argv)
 
             t2 = omp_get_wtime();
             
-            if (p_imu->imu_need_init_ || !p_imu->after_imu_init_)
+            if (p_imu->UseLIInit && p_imu->imu_need_init_)
             {
-                if (!p_imu->imu_need_init_)
-                { 
-                    V3D tmp_gravity = - p_imu->mean_acc / acc_norm * G_m_s2;
-                    // V3D tmp_gravity << VEC_FROM_ARRAY(gravity_init);
-                    M3D rot_init;
-                    p_imu->Set_init(tmp_gravity, rot_init);  
-                    kf_input.x_.rot = kf_output.x_.rot = rot_init;
-                    kf_input.x_.rot.normalize();
-                    kf_output.x_.rot.normalize();
-                    kf_output.x_.acc = - rot_init.transpose() * kf_output.x_.gravity;
-                }
                 continue;
             }
             /*** iterated state estimation ***/
@@ -807,7 +810,6 @@ int main(int argc, char** argv)
                 point_crossmat << SKEW_SYM_MATRX(point_this);
                 crossmat_list[i]=point_crossmat;
             }
-            
             if (!use_imu_as_input)
             {     
                 bool imu_upda_cov = false;
