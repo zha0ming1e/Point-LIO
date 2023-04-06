@@ -38,7 +38,7 @@ class GnssLioFactor : public gtsam::NoiseModelFactor4<gtsam::Rot3, gtsam::Vector
             Eigen::Matrix3d d = rot1.transpose() * rot2.matrix();
             Eigen::Vector3d delta_p = rot1.transpose() * (pos_vel_bias2.segment<3>(0) - pos_vel_bias1.segment<3>(0) - pos_vel_bias1.segment<3>(3) * dt - 0.5 * grav * dt * dt);
             Eigen::Vector3d delta_v = rot1.transpose() * (pos_vel_bias2.segment<3>(3) - pos_vel_bias1.segment<3>(3) - grav * dt);
-            double sqrt_info = 0.1 / dt * odo_weight; // could change the rmse
+            double sqrt_info = 1.0; // 0.1 / dt * odo_weight; // could change the rmse
 
             Eigen::Matrix3d res_R = rel_rot.transpose() * d;//.matrix();
             Eigen::Vector3d res_r = gtsam::Rot3::Logmap(gtsam::Rot3(res_R));

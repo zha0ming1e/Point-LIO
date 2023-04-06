@@ -48,10 +48,8 @@ class GNSSProcess
 
   bool gnss_online_init; // no use
   bool invalid_lidar = false;
-  
-  // size_t index_delete = 0; // 
-  // size_t E_num = 0; // 
-  // std::deque<std::pair<double, int>> time_frame;
+  // double dt[4];
+  // double ddt; 
   size_t id_accumulate; // 
   size_t frame_delete = 0; // 
 

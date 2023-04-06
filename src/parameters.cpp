@@ -463,7 +463,7 @@ void cout_state_to_file()
         {
             if (nolidar)
             {
-                V3D euler_cur = SO3ToEuler(kf_input.x_.rot);
+                V3D euler_cur = SO3ToEuler(kf_output.x_.rot);
                 fout_out << setw(20) << time_predict_last_const - first_imu_time << " " << euler_cur.transpose() << " " << pos_enu.transpose() << " " << kf_output.x_.vel.transpose() \
                         <<" "<<kf_output.x_.omg.transpose()<<" "<<kf_output.x_.acc.transpose()<<" "<<kf_output.x_.gravity.transpose()<<" "<<p_gnss->p_assign->isamCurrentEstimate.at<gtsam::Vector1>(C(p_gnss->frame_num-1))[0] \
                         << " " << p_gnss->p_assign->isamCurrentEstimate.at<gtsam::Vector1>(C(p_gnss->frame_num-1))[0] << " " <<p_gnss->p_assign->isamCurrentEstimate.at<gtsam::Vector1>(C(p_gnss->frame_num-1))[0]<<" "<<p_gnss->p_assign->isamCurrentEstimate.at<gtsam::Vector4>(B(p_gnss->frame_num-1)).transpose()<<endl;

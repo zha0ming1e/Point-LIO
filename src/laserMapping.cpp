@@ -1964,7 +1964,7 @@ int main(int argc, char** argv)
                             R_enu_local_ = ecef2rotation(anc) * Eigen::AngleAxisd(offline_init_vec[3], Eigen::Vector3d::UnitZ()); 
                             Eigen::Vector3d pos_enu = p_gnss->local2enu(R_enu_local_, anc, pos_r);
                             euler_cur = SO3ToEuler(kf_input.x_.rot);
-                            fout_out << setw(20) << imu_next.header.stamp.toSec() - first_imu_time << " " << euler_cur.transpose() << " " << pos_enu.transpose() << " " << kf_input.x_.vel.transpose() \
+                            fout_out << setw(20) << imu_next.header.stamp.toSec() - first_imu_time << " " << euler_cur.transpose() << " " << kf_input.x_.pos.transpose() << " " << kf_input.x_.vel.transpose() \
                             <<" "<<kf_input.x_.bg.transpose()<<" "<<kf_input.x_.ba.transpose()<<" "<<kf_input.x_.gravity.transpose()<<" " <<0<<endl;
                         }
                         // fout_out << setw(20) << Measures.lidar_beg_time - first_lidar_time << " " << euler_cur.transpose() << " " << state_in.pos.transpose() << " " << state_in.vel.transpose() \
