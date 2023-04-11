@@ -197,27 +197,36 @@ class GnssPsrDoppFactorPos : public gtsam::NoiseModelFactor5<gtsam::Vector6, gts
                 if (H5)
                 {
                     (*H5) = gtsam::Matrix::Zero(2,3);
-                    if (pos_vel_bias.segment<3>(3).norm() > 0.3)
-                    {
                     Eigen::Vector3d pos_v = local_pos - anc_local;
                     Eigen::Matrix3d d_pos, d_vel;
-                    d_pos << 0.0, -pos_v[2], pos_v[1], 
-                                pos_v[2], 0.0, -pos_v[0], 
-                                -pos_v[1], pos_v[0], 0.0;
-                    d_vel << 0.0, -local_vel[2], local_vel[1], 
-                                local_vel[2], 0.0, -local_vel[0], 
-                                -local_vel[1], local_vel[0], 0.0;
-                    // d_pos << 0.0, 0.0, pos_v[1], 
-                    //             0.0, 0.0, -pos_v[0], 
-                    //             0.0, 0.0, 0.0;
-                    // d_vel << 0.0, 0.0, local_vel[1], 
-                    //             0.0, 0.0, -local_vel[0], 
-                    //             0.0, 0.0, 0.0;
+                    if (pos_vel_bias.segment<3>(3).norm() > 0.3)
+                    {
+                        d_pos << 0.0, -pos_v[2], pos_v[1], 
+                                    pos_v[2], 0.0, -pos_v[0], 
+                                    -pos_v[1], pos_v[0], 0.0;
+                        d_vel << 0.0, -local_vel[2], local_vel[1], 
+                                    local_vel[2], 0.0, -local_vel[0], 
+                                    -local_vel[1], local_vel[0], 0.0;
+                        // d_pos << 0.0, 0.0, pos_v[1], 
+                        //             0.0, 0.0, -pos_v[0], 
+                        //             0.0, 0.0, 0.0;
+                        // d_vel << 0.0, 0.0, local_vel[1], 
+                        //             0.0, 0.0, -local_vel[0], 
+                        //             0.0, 0.0, 0.0;
+                    }
+                    else
+                    {
+                        d_pos << 0.0, -pos_v[2], 0.0, 
+                                    pos_v[2], 0.0, 0.0, 
+                                    -pos_v[1], pos_v[0], 0.0;
+                        d_vel << 0.0, -local_vel[2], 0.0, 
+                                    local_vel[2], 0.0, 0.0, 
+                                    -local_vel[1], local_vel[0], 0.0;
+                    }
                     (*H5).block<1,3>(0,0) = rcv2sat_unit.transpose() * (R_ecef_local * d_pos) * pr_weight;
                     (*H5).block<1,3>(1,0) = rcv2sat_unit.transpose() * (R_ecef_local * d_vel) * dp_weight - (sv_vel-V_ecef).transpose() * unit2rcv_pos * 
                                     R_ecef_local * d_pos * dp_weight;
                     // printf("check hessian:%f, %f, %f\n", (*H6)(0, 0), (*H6)(0, 1), (*H6)(0, 2));
-                    }
                 }
                 return residual;
             }

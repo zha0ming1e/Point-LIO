@@ -117,13 +117,13 @@ bool GNSSLIInitializer::anchor_refinement(const std::vector<Eigen::Vector3d> &lo
     Eigen::Vector4d refine_dt = rough_ecef_dt.tail<4>();
     uint32_t refine_iter = 0;
     double refine_dx_norm = 1.0;
-    Eigen::Vector3d refine_pos;
-    refine_pos.setZero();
-    for (uint32_t k = 0; k < local_ps.size(); k++)
-    {
-        refine_pos += local_ps[k];
-    }
-    refine_pos /= local_ps.size();
+    // Eigen::Vector3d refine_pos;
+    // refine_pos.setZero();
+    // for (uint32_t k = 0; k < local_ps.size(); k++)
+    // {
+    //     refine_pos += local_ps[k];
+    // }
+    // refine_pos /= local_ps.size();
     std::vector<uint32_t> unobserved_sys;
     for (uint32_t k = 0; k < 4; ++k)
     {

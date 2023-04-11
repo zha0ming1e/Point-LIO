@@ -5,7 +5,7 @@ GNSSAssignment::GNSSAssignment() : gnss_track_num_threshold(20) {}
 void GNSSAssignment::initNoises( void ) // maybe usable!
 {
     gtsam::Vector priorrotNoiseVector3(3);
-    priorrotNoiseVector3 << prior_noise, prior_noise, prior_noise;
+    priorrotNoiseVector3 << prior_noise * 1, prior_noise * 1, prior_noise * 1;
     priorrotNoise = gtsam::noiseModel::Diagonal::Variances(priorrotNoiseVector3);
 
     gtsam::Vector priorposNoiseVector12(12);
@@ -381,17 +381,17 @@ void GNSSAssignment::delete_variables(bool nolidar, size_t frame_delete, int fra
       {
         if (frame_delete >= change_ext)
         {
-            gtsam::noiseModel::Gaussian::shared_ptr updatedERNoise = gtsam::noiseModel::Gaussian::Covariance(isam.marginalCovariance(P(0)) * 1); // important
-            gtsam::noiseModel::Gaussian::shared_ptr updatedEPNoise = gtsam::noiseModel::Gaussian::Covariance(isam.marginalCovariance(E(0)) * 1); // important
-            gtsam::PriorFactor<gtsam::Rot3> init_ER(P(0),isamCurrentEstimate.at<gtsam::Rot3>(P(0)), updatedERNoise); //  margrotNoise); //
-            gtsam::PriorFactor<gtsam::Vector3> init_EP(E(0),isamCurrentEstimate.at<gtsam::Vector3>(E(0)), updatedEPNoise); // margrotNoise); // 
-            gtSAMgraph.add(init_ER);
-            gtSAMgraph.add(init_EP);
+            // gtsam::noiseModel::Gaussian::shared_ptr updatedERNoise = gtsam::noiseModel::Gaussian::Covariance(isam.marginalCovariance(P(0)) * 1); // important
+            // gtsam::noiseModel::Gaussian::shared_ptr updatedEPNoise = gtsam::noiseModel::Gaussian::Covariance(isam.marginalCovariance(E(0)) * 1); // important
+            // gtsam::PriorFactor<gtsam::Rot3> init_ER(P(0),isamCurrentEstimate.at<gtsam::Rot3>(P(0)), updatedERNoise); //  margrotNoise); //
+            // gtsam::PriorFactor<gtsam::Vector3> init_EP(E(0),isamCurrentEstimate.at<gtsam::Vector3>(E(0)), updatedEPNoise); // margrotNoise); // 
+            // gtSAMgraph.add(init_ER);
+            // gtSAMgraph.add(init_EP);
             // factor_id_frame[0].push_back(id_accumulate);
             // factor_id_frame[0].push_back(id_accumulate+1);
-            factor_id_frame[frame_num - 1 - frame_delete].push_back(id_accumulate);
-            factor_id_frame[frame_num - 1 - frame_delete].push_back(id_accumulate+1);
-            id_accumulate += 2;
+            // factor_id_frame[frame_num - 1 - frame_delete].push_back(id_accumulate);
+            // factor_id_frame[frame_num - 1 - frame_delete].push_back(id_accumulate+1);
+            // id_accumulate += 2;
             change_ext = frame_num;
         }
         size_t j = 0;

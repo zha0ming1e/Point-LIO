@@ -131,26 +131,35 @@ class GnssCpFactor : public gtsam::NoiseModelFactor6<gtsam::Vector3, gtsam::Rot3
                 if (H2)
                 {
                     (*H2) = gtsam::Matrix::Zero(1,3);
-                    if (pos2.segment<3>(3).norm() > 0.3)
-                    {
                     Eigen::Matrix3d d_pos1, d_pos2;
                     Eigen::Vector3d pos_v1 = local_pos1 - anc_local;
                     Eigen::Vector3d pos_v2 = local_pos2 - anc_local;
-                    d_pos1 << 0.0, -pos_v1[2], pos_v1[1], 
-                                pos_v1[2], 0.0, -pos_v1[0], 
-                                -pos_v1[1], pos_v1[0], 0.0;
-                    d_pos2 << 0.0, -pos_v2[2], pos_v2[1], 
-                                pos_v2[2], 0.0, -pos_v2[0], 
-                                -pos_v2[1], pos_v2[0], 0.0;
-                    // d_pos1 << 0.0, 0.0, pos_v1[1], 
-                    //             0.0, 0.0, -pos_v1[0], 
-                    //             0.0, 0.0, 0.0;
-                    // d_pos2 << 0.0, 0.0, pos_v2[1], 
-                    //             0.0, 0.0, -pos_v2[0], 
-                    //             0.0, 0.0, 0.0;
+                    if (pos2.segment<3>(3).norm() > 0.3)
+                    {
+                        d_pos1 << 0.0, -pos_v1[2], pos_v1[1], 
+                                    pos_v1[2], 0.0, -pos_v1[0], 
+                                    -pos_v1[1], pos_v1[0], 0.0;
+                        d_pos2 << 0.0, -pos_v2[2], pos_v2[1], 
+                                    pos_v2[2], 0.0, -pos_v2[0], 
+                                    -pos_v2[1], pos_v2[0], 0.0;
+                        // d_pos1 << 0.0, 0.0, pos_v1[1], 
+                        //             0.0, 0.0, -pos_v1[0], 
+                        //             0.0, 0.0, 0.0;
+                        // d_pos2 << 0.0, 0.0, pos_v2[1], 
+                        //             0.0, 0.0, -pos_v2[0], 
+                        //             0.0, 0.0, 0.0;
+                    }
+                    else
+                    {
+                        d_pos1 << 0.0, -pos_v1[2], 0.0, 
+                                    pos_v1[2], 0.0, 0.0, 
+                                    -pos_v1[1], pos_v1[0], 0.0;
+                        d_pos2 << 0.0, -pos_v2[2], 0.0, 
+                                    pos_v2[2], 0.0, 0.0, 
+                                    -pos_v2[1], pos_v2[0], 0.0;
+                    }
                     (*H2).block<1,3>(0,0) = (rcv2sat_unit_bj - rcv2sat_unit_pj).transpose() * R_ecef_local * d_pos2 * cp_weight
                                 -(rcv2sat_unit_bi - rcv2sat_unit_pi).transpose() * R_ecef_local * d_pos1 * cp_weight;
-                    }
                     // printf("check hessian:%f, %f, %f\n", (*H2)(0, 0), (*H2)(0, 1), (*H2)(0, 2));
                 }
 
