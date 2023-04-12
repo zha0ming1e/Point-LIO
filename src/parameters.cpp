@@ -183,7 +183,7 @@ void readParameters(ros::NodeHandle &nh)
         nh.param<double>("gnss/outlier_thres",p_gnss->p_assign->outlier_thres, 0.1);
         nh.param<double>("gnss/gnss_sample_period",p_gnss->gnss_sample_period, 0.1);
         nh.param<bool>("gnss/nolidar",nolidar, false);
-        nh.param<bool>("gnss/quick_init",p_gnss->quick_init, false);
+        // nh.param<bool>("gnss/quick_init",p_gnss->quick_init, false);
         nh.param<bool>("gnss/online_init",p_gnss->gnss_online_init, false);
         nh.param<bool>("gnss/ephem_from_rinex",p_gnss->p_assign->ephem_from_rinex, false);
         p_gnss->p_assign->initNoises();

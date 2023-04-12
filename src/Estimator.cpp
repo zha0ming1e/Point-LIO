@@ -167,7 +167,7 @@ void h_model_input(state_input &s, esekfom::dyn_share_modified<double> &ekfom_da
 		if(point_selected_surf[idx+j+1])
 		{
 			V3D norm_vec(normvec->points[j].x, normvec->points[j].y, normvec->points[j].z);
-			
+			p_gnss->norm_vec_holder.push_back(norm_vec);
 			// if (extrinsic_est_en)
 			// {
 			// 	V3D p_body = pbody_list[idx+j+1];
@@ -199,7 +199,6 @@ void h_model_output(state_output &s, esekfom::dyn_share_modified<double> &ekfom_
 	bool match_in_map = false;
 	VF(4) pabcd;
 	pabcd.setZero();
-	
 	normvec->resize(time_seq[k]);
 	int effect_num_k = 0;
 	for (int j = 0; j < time_seq[k]; j++)
@@ -254,7 +253,7 @@ void h_model_output(state_output &s, esekfom::dyn_share_modified<double> &ekfom_
 		if(point_selected_surf[idx+j+1])
 		{
 			V3D norm_vec(normvec->points[j].x, normvec->points[j].y, normvec->points[j].z);
-			
+			p_gnss->norm_vec_holder.push_back(norm_vec);
 			// if (extrinsic_est_en)
 			// {
 			// 	V3D p_body = pbody_list[idx+j+1];

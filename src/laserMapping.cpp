@@ -702,7 +702,7 @@ int main(int argc, char** argv)
                 continue;
             }
             /*** initialize the map kdtree ***/
-            if(!init_map && !nolidar)
+            if(!init_map && !nolidar && !lose_lid)
             {
                 if(ikdtree.Root_Node == nullptr) //
                 // if(feats_down_size > 5)
@@ -776,7 +776,7 @@ int main(int argc, char** argv)
 
             t2 = omp_get_wtime();
             
-            if (p_imu->UseLIInit && p_imu->imu_need_init_)
+            if (p_imu->UseLIInit && p_imu->imu_need_init_ && !lose_lid)
             {
                 continue;
             }
@@ -836,12 +836,12 @@ int main(int argc, char** argv)
                                 imu_last = imu_next;
                                 imu_next = *(imu_deque.front());
                             }
-
                             angvel_avr<<imu_last.angular_velocity.x, imu_last.angular_velocity.y, imu_last.angular_velocity.z;
                             acc_avr   <<imu_last.linear_acceleration.x, imu_last.linear_acceleration.y, imu_last.linear_acceleration.z;
                         }
                         if (GNSS_ENABLE)
                         {
+                            std::vector<Eigen::Vector3d>().swap(p_gnss->norm_vec_holder);
                             acc_avr_norm = acc_avr * G_m_s2 / acc_norm;
                             p_gnss->pre_integration->repropagate(kf_output.x_.ba, kf_output.x_.bg);
                             p_gnss->pre_integration->setacc0gyr0(acc_avr_norm, angvel_avr);
@@ -1017,7 +1017,6 @@ int main(int argc, char** argv)
                         {
                             double dt = time2sec(gnss_cur[0]->time) - gnss_local_time_diff - time_predict_last_const;
                             double dt_cov = time2sec(gnss_cur[0]->time) - gnss_local_time_diff - time_update_last;
-
                             // cout << "check gnss ready:" << p_gnss->gnss_ready << endl;
                             if (p_gnss->gnss_ready)
                             {
@@ -1157,9 +1156,10 @@ int main(int argc, char** argv)
                         imu_next = *(imu_deque.front());
 
                     while (imu_next.header.stamp.toSec() > time_current && ((imu_next.header.stamp.toSec() < imu_first_time + lidar_time_inte && nolidar) || (imu_next.header.stamp.toSec() < Measures.lidar_beg_time + lidar_time_inte && !nolidar)))
-                    {
+                    { // >= ?
                         if (is_first_frame)
                         {
+                            if (!nolidar) std::vector<Eigen::Vector3d>().swap(p_gnss->norm_vec_holder);
                             if (!p_gnss->gnss_msg.empty())
                             {
                                 gnss_cur = p_gnss->gnss_msg.front();
@@ -1302,8 +1302,8 @@ int main(int argc, char** argv)
                                 {
                                     if (nolidar)
                                     {
-                                        Eigen::Matrix3d R_enu_local_;
-                                        R_enu_local_ = Eigen::AngleAxisd(p_gnss->yaw_enu_local, Eigen::Vector3d::UnitZ());
+                                        // Eigen::Matrix3d R_enu_local_;
+                                        // R_enu_local_ = Eigen::AngleAxisd(p_gnss->yaw_enu_local, Eigen::Vector3d::UnitZ());
                                         kf_output.x_.pos = p_gnss->p_assign->isamCurrentEstimate.at<gtsam::Vector12>(F(p_gnss->frame_num-1)).segment<3>(0); // p_gnss->anc_ecef - p_gnss->R_ecef_enu * R_enu_local_ * state_const.rot_end * p_gnss->Tex_imu_r;
                                         kf_output.x_.rot = p_gnss->p_assign->isamCurrentEstimate.at<gtsam::Rot3>(R(p_gnss->frame_num-1)).matrix(); // p_gnss->R_ecef_enu * R_enu_local_ * state_const.rot_end;
                                         kf_output.x_.rot.normalize();
@@ -1395,14 +1395,16 @@ int main(int argc, char** argv)
                         t_last = time_current;
                         time_update_last = time_current; 
                         {
-                            input_in.gyro<<imu_last.angular_velocity.x, imu_last.angular_velocity.y, imu_last.angular_velocity.z;
-                                            
+                            input_in.gyro<<imu_last.angular_velocity.x, imu_last.angular_velocity.y, imu_last.angular_velocity.z;                 
                             input_in.acc<<imu_last.linear_acceleration.x, imu_last.linear_acceleration.y, imu_last.linear_acceleration.z;
                             input_in.acc = input_in.acc * G_m_s2 / acc_norm;
                         }
-
-                        p_gnss->pre_integration->repropagate(kf_input.x_.ba, kf_input.x_.bg);
-                        p_gnss->pre_integration->setacc0gyr0(input_in.acc, input_in.gyro);
+                        if (GNSS_ENABLE)
+                        {
+                            p_gnss->pre_integration->repropagate(kf_input.x_.ba, kf_input.x_.bg);
+                            p_gnss->pre_integration->setacc0gyr0(input_in.acc, input_in.gyro);
+                            std::vector<Eigen::Vector3d>().swap(p_gnss->norm_vec_holder);
+                        }
                     }
                     
                     while (time_current > imu_next.header.stamp.toSec()) // && !imu_deque.empty())
@@ -1678,7 +1680,7 @@ int main(int argc, char** argv)
                     imu_last = imu_next;
                     imu_next = *(imu_deque.front());
                     while (imu_next.header.stamp.toSec() > time_current && ((imu_next.header.stamp.toSec() < imu_first_time + lidar_time_inte && nolidar )|| (imu_next.header.stamp.toSec() < Measures.lidar_beg_time + lidar_time_inte && !nolidar)))
-                    {
+                    { // >= ?
                         if (is_first_frame)
                         {
                             if (!p_gnss->gnss_msg.empty())
@@ -1725,14 +1727,11 @@ int main(int argc, char** argv)
                             t_last = time_current;
                             time_update_last = time_current; 
                             input_in.gyro<<imu_last.angular_velocity.x, imu_last.angular_velocity.y, imu_last.angular_velocity.z;
-                                            
                             input_in.acc   <<imu_last.linear_acceleration.x, imu_last.linear_acceleration.y, imu_last.linear_acceleration.z;
                             input_in.acc = input_in.acc * G_m_s2 / acc_norm;
-                            if (GNSS_ENABLE)
-                            {
-                                p_gnss->pre_integration->repropagate(kf_input.x_.ba, kf_input.x_.bg);
-                                p_gnss->pre_integration->setacc0gyr0(input_in.acc, input_in.gyro);
-                            }
+                            if (!nolidar) std::vector<Eigen::Vector3d>().swap(p_gnss->norm_vec_holder);
+                            p_gnss->pre_integration->repropagate(kf_input.x_.ba, kf_input.x_.bg);
+                            p_gnss->pre_integration->setacc0gyr0(input_in.acc, input_in.gyro);
                             if (nolidar && !p_gnss->gnss_online_init) // no meaning
                             {
                                 if (!p_gnss->gnss_msg.empty())

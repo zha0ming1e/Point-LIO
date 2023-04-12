@@ -474,15 +474,6 @@ bool sync_packages(MeasureGroup &meas, queue<std::vector<ObsPtr>> &gnss_msg)
             {
                 if (!gnss_meas_buf.empty()) // or can wait for a short time?
                 {
-                    // double back_gnss_ts = time2sec(gnss_meas_buf.back()[0]->time);
-                    // if (!lose_lid && back_gnss_ts < lidar_end_time)
-                    // {
-                    //     return false;
-                    // }
-                    // if (lose_lid && back_gnss_ts < meas.lidar_beg_time + lidar_time_inte)
-                    // {
-                    //     return false;
-                    // }
                     double front_gnss_ts = time2sec(gnss_meas_buf.front()[0]->time);
                     while (front_gnss_ts < meas.lidar_beg_time + gnss_local_time_diff) // 0.05
                     {
@@ -491,6 +482,8 @@ bool sync_packages(MeasureGroup &meas, queue<std::vector<ObsPtr>> &gnss_msg)
                         if (gnss_meas_buf.empty()) break;
                         front_gnss_ts = time2sec(gnss_meas_buf.front()[0]->time);
                     }
+                    if (!gnss_meas_buf.empty())
+                    {
                     while (((!lose_lid && front_gnss_ts < lidar_end_time + gnss_local_time_diff) || (lose_lid && front_gnss_ts < meas.lidar_beg_time + gnss_local_time_diff + lidar_time_inte) ))
                     {
                         gnss_msg.push(gnss_meas_buf.front());
@@ -504,6 +497,7 @@ bool sync_packages(MeasureGroup &meas, queue<std::vector<ObsPtr>> &gnss_msg)
                         lidar_buffer.pop_front();
                         lidar_pushed = false;
                         return true;
+                    }
                     }
                 }
 
@@ -549,7 +543,6 @@ bool sync_packages(MeasureGroup &meas, queue<std::vector<ObsPtr>> &gnss_msg)
         {
             cout << "lose lidar" << endl;
             lose_lid = true;
-            lidar_pushed = true;
             // lidar_buffer.pop_front();
             // time_buffer.pop_front();
             // return false;
@@ -567,8 +560,8 @@ bool sync_packages(MeasureGroup &meas, queue<std::vector<ObsPtr>> &gnss_msg)
             lidar_end_time = meas.lidar_beg_time + end_time / double(1000);
             // cout << "check time lidar:" << end_time << endl;
             meas.lidar_last_time = lidar_end_time;
-            lidar_pushed = true;
         }
+        lidar_pushed = true;
     }
 
     if (!lose_lid && last_timestamp_imu < lidar_end_time)
@@ -656,7 +649,7 @@ bool sync_packages(MeasureGroup &meas, queue<std::vector<ObsPtr>> &gnss_msg)
                             lidar_pushed = false;
                             lidar_buffer.pop_front();
                             time_buffer.pop_front();
-                            is_first_gnss = false;
+                            is_first_gnss = false; // ?
                             return false;
                         }
                     }
@@ -676,7 +669,6 @@ bool sync_packages(MeasureGroup &meas, queue<std::vector<ObsPtr>> &gnss_msg)
             }
             else
             {
-                // if (!lose_lid)
                 {
                     double imu_time = imu_deque.front()->header.stamp.toSec();
                     imu_next = *(imu_deque.front());

@@ -25,7 +25,7 @@ namespace glio {
 class GnssCpFactor : public gtsam::NoiseModelFactor6<gtsam::Vector3, gtsam::Rot3, gtsam::Rot3, gtsam::Vector6, gtsam::Rot3, gtsam::Vector6>
 {
     public: 
-        GnssCpFactor(gtsam::Key f1, gtsam::Key f2, gtsam::Key i1, gtsam::Key i2, gtsam::Key j1, gtsam::Key j2, double values_[20], const gtsam::SharedNoiseModel& model) :
+        GnssCpFactor(gtsam::Key f1, gtsam::Key f2, gtsam::Key i1, gtsam::Key i2, gtsam::Key j1, gtsam::Key j2, bool invalid_lidar_, double values_[20], const gtsam::SharedNoiseModel& model) :
         gtsam::NoiseModelFactor6<gtsam::Vector3, gtsam::Rot3, gtsam::Rot3, gtsam::Vector6, gtsam::Rot3, gtsam::Vector6>(model, f1, f2, i1, i2, j1, j2) {
             Tex_imu_r << values_[0], values_[1], values_[2];
             anc_local << values_[3], values_[4], values_[5];
@@ -35,6 +35,7 @@ class GnssCpFactor : public gtsam::NoiseModelFactor6<gtsam::Vector3, gtsam::Rot3
             sv_pos_pj << values_[15], values_[16], values_[17];
             cp_measured = values_[18];
             cp_weight = values_[19];
+            invalid_lidar = invalid_lidar_;
         }
 
         virtual ~GnssCpFactor() {}
@@ -121,16 +122,19 @@ class GnssCpFactor : public gtsam::NoiseModelFactor6<gtsam::Vector3, gtsam::Rot3
                     // hatP2 << 0.0, -vecP2(2), vecP2(1),
                     //     vecP2(2), 0.0, -vecP2(0),
                     //     -vecP2(1), vecP2(0), 0.0;
-
+                    if (!invalid_lidar)
+                    {
                     (*H1).block<1,3>(0,0) = (-rcv2sat_unit_bj + rcv2sat_unit_pj).transpose() * cp_weight + (rcv2sat_unit_bi - rcv2sat_unit_pi).transpose() * cp_weight;
                     // (*H1).block<1,3>(0,0) = (-rcv2sat_unit_bj + rcv2sat_unit_pj).transpose() * (Eye3d + R_ecef_enu_cur * hatP2 * R1TE3 * vecLon.transpose() - R_ecef_enu_cur * hatP2 * E1 * vecLat.transpose()) * cp_weight
                     //          + (rcv2sat_unit_bi - rcv2sat_unit_pi).transpose() * (Eye3d + R_ecef_enu_cur * hatP1 * R1TE3 * vecLon.transpose() - R_ecef_enu_cur * hatP1 * E1 * vecLat.transpose()) * cp_weight;
-                
+                    }
                 }
 
                 if (H2)
                 {
                     (*H2) = gtsam::Matrix::Zero(1,3);
+                    if (!invalid_lidar)
+                    {
                     Eigen::Matrix3d d_pos1, d_pos2;
                     Eigen::Vector3d pos_v1 = local_pos1 - anc_local;
                     Eigen::Vector3d pos_v2 = local_pos2 - anc_local;
@@ -161,6 +165,7 @@ class GnssCpFactor : public gtsam::NoiseModelFactor6<gtsam::Vector3, gtsam::Rot3
                     (*H2).block<1,3>(0,0) = (rcv2sat_unit_bj - rcv2sat_unit_pj).transpose() * R_ecef_local * d_pos2 * cp_weight
                                 -(rcv2sat_unit_bi - rcv2sat_unit_pi).transpose() * R_ecef_local * d_pos1 * cp_weight;
                     // printf("check hessian:%f, %f, %f\n", (*H2)(0, 0), (*H2)(0, 1), (*H2)(0, 2));
+                    }
                 }
 
                 if (H3)
@@ -192,6 +197,7 @@ class GnssCpFactor : public gtsam::NoiseModelFactor6<gtsam::Vector3, gtsam::Rot3
     private:
         Eigen::Vector3d sv_pos_bi, sv_pos_bj, sv_pos_pi, sv_pos_pj, Tex_imu_r, anc_local;
         double cp_measured, cp_weight;
+        bool invalid_lidar;
 };
 }
 

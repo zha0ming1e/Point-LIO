@@ -366,32 +366,6 @@ bool GNSSProcess::GNSSLIAlign()
     }
   }
 
-  // check horizontal velocity excitation
-  if (!quick_init)
-  {
-    Eigen::Vector2d avg_hor_vel(0.0, 0.0);
-    for (uint32_t i = 0; i < (wind_size+1); ++i)
-        avg_hor_vel += vel_window[i].head<2>().cwiseAbs();
-    avg_hor_vel /= (wind_size+1);
-    if (avg_hor_vel.norm() < 0.3) // if (0) ?
-    {
-      std::cerr << "velocity excitation not enough for GNSS-LI alignment.\n";
-      for (uint32_t i = 0; i < (wind_size); ++i)
-      {
-        gnss_meas_buf[i] = gnss_meas_buf[i+1];
-        gnss_ephem_buf[i] = gnss_ephem_buf[i+1];
-        rot_window[i] = rot_window[i+1];
-        pos_window[i] = pos_window[i+1];
-        vel_window[i] = vel_window[i+1];
-      }
-      frame_count = wind_size;
-      std::vector<ObsPtr> empty_vec_o;
-      std::vector<EphemBasePtr> empty_vec_e;
-      gnss_meas_buf[frame_count].swap(empty_vec_o);
-      gnss_ephem_buf[frame_count].swap(empty_vec_e);    
-      return false;
-    }
-  }
   std::vector<std::vector<ObsPtr>> curr_gnss_meas_buf;
   std::vector<std::vector<EphemBasePtr>> curr_gnss_ephem_buf;
   for (uint32_t i = 0; i < (wind_size+1); ++i)
@@ -423,134 +397,60 @@ bool GNSSProcess::GNSSLIAlign()
       gnss_ephem_buf[frame_count].swap(empty_vec_e);
       return false;
   }
-
-  if (!quick_init)
   {
-    // 2. perform yaw alignment
-    std::vector<Eigen::Vector3d> local_vs;
-    for (uint32_t i = 0; i < (wind_size+1); ++i)
-        local_vs.push_back(vel_window[i]); // values at gnss measurement
-    Eigen::Vector3d rough_anchor_ecef = rough_xyzt.head<3>();
-    double aligned_yaw = 0;
-    double aligned_rcv_ddt = 0;
-    if (!gnss_li_initializer.yaw_alignment(local_vs, rough_anchor_ecef, aligned_yaw, aligned_rcv_ddt))
-    {
-        std::cerr << "Fail to align ENU and local frames.\n";
-        for (uint32_t i = 0; i < (wind_size); ++i)
-        {
-          gnss_meas_buf[i] = gnss_meas_buf[i+1];
-          gnss_ephem_buf[i] = gnss_ephem_buf[i+1];
-
-          rot_window[i] = rot_window[i+1];
-          pos_window[i] = pos_window[i+1];
-          vel_window[i] = vel_window[i+1];
-        }
-        frame_count = wind_size;
-        std::vector<ObsPtr> empty_vec_o;
-        std::vector<EphemBasePtr> empty_vec_e;
-        gnss_meas_buf[frame_count].swap(empty_vec_o);
-        gnss_ephem_buf[frame_count].swap(empty_vec_e);
-        return false;
-    }
-
-    // 3. perform anchor refinement
-    std::vector<Eigen::Vector3d> local_ps;
-    for (uint32_t i = 0; i < (wind_size+1); ++i)
-        local_ps.push_back(pos_window[i]); // values at gnss measurement
-    Eigen::Matrix<double, 7, 1> refined_xyzt;
-    refined_xyzt.setZero();
-    if (!gnss_li_initializer.anchor_refinement(local_ps, aligned_yaw, 
-        aligned_rcv_ddt, rough_xyzt, refined_xyzt))
-    {
-        std::cerr << "Fail to refine anchor point.\n";
-        for (uint32_t i = 0; i < (wind_size); ++i)
-        {
-          gnss_meas_buf[i] = gnss_meas_buf[i+1];
-          gnss_ephem_buf[i] = gnss_ephem_buf[i+1];
-
-          rot_window[i] = rot_window[i+1];
-          pos_window[i] = pos_window[i+1];
-          vel_window[i] = vel_window[i+1];
-        }
-        frame_count = wind_size;
-        std::vector<ObsPtr> empty_vec_o;
-        std::vector<EphemBasePtr> empty_vec_e;
-        gnss_meas_buf[frame_count].swap(empty_vec_o);
-        gnss_ephem_buf[frame_count].swap(empty_vec_e);
-        return false;
-    }
-
-    // restore GNSS states
-    uint32_t one_observed_sys = static_cast<uint32_t>(-1);
-    for (uint32_t k = 0; k < 4; ++k)
-    {
-        if (rough_xyzt(k+3) != 0) // why use rough value?
-        {
-            one_observed_sys = k;
-            break;
-        }
-    }
-    for (uint32_t i = 0; i < (wind_size+1); ++i)
-    {
-        para_rcv_ddt[i] = aligned_rcv_ddt;
-        for (uint32_t k = 0; k < 4; ++k)
-        {
-            if (rough_xyzt(k+3) == 0)
-                para_rcv_dt[i*4+k] = refined_xyzt(3+one_observed_sys) + aligned_rcv_ddt * (time2sec(gnss_meas_buf[i][0]->time) - time2sec(gnss_meas_buf[0][0]->time)); // why multiply i? should it be dt? how to get dt (TODO)
-            else
-                para_rcv_dt[i*4+k] = refined_xyzt(3+k) + aligned_rcv_ddt * (time2sec(gnss_meas_buf[i][0]->time) - time2sec(gnss_meas_buf[0][0]->time));
-        }
-    }
-    anc_ecef = refined_xyzt.head<3>();
-    anc_local = pos_window[0]; // [WINDOW_SIZE]; // ?
-    yaw_enu_local = aligned_yaw; // can we align the rot matrix?
-    R_ecef_enu = ecef2rotation(anc_ecef);
-    SetInit();
-    last_gnss_time = time2sec(gnss_meas_buf[wind_size][0]->time);
-    frame_num = 1; //frame_count;
-  }
-  else
-  {
+    bool dt_fail[4];
+    memset(dt_fail, false, sizeof(dt_fail));
+    size_t num_dt_fail = 0, dt_success = 0;
     for (uint32_t k = 0; k < 4; k++)
     {
       if (rough_xyzt(3+k) == 0)
       {
-        std::cerr << "Fail to quick init anchor point.\n";
-        for (uint32_t i = 0; i < (wind_size); ++i)
-        {
-          gnss_meas_buf[i] = gnss_meas_buf[i+1]; // change the strategy
-          gnss_ephem_buf[i] = gnss_ephem_buf[i+1];
-
-          rot_window[i] = rot_window[i+1];
-          pos_window[i] = pos_window[i+1];
-          vel_window[i] = vel_window[i+1];
-        }
-        frame_count = wind_size;
-        std::vector<ObsPtr> empty_vec_o;
-        std::vector<EphemBasePtr> empty_vec_e;
-        gnss_meas_buf[frame_count].swap(empty_vec_o);
-        gnss_ephem_buf[frame_count].swap(empty_vec_e);
-        return false;
+        num_dt_fail += 1;
+        dt_fail[k] = true;
+      }
+      else
+      {
+        dt_success = k;
       }
     }
+    if (num_dt_fail == 4)
+    {
+      std::cerr << "Fail to quick init anchor point.\n";
+      for (uint32_t i = 0; i < (wind_size); ++i)
+      {
+        gnss_meas_buf[i] = gnss_meas_buf[i+1]; // change the strategy
+        gnss_ephem_buf[i] = gnss_ephem_buf[i+1];
+
+        rot_window[i] = rot_window[i+1];
+        pos_window[i] = pos_window[i+1];
+        vel_window[i] = vel_window[i+1];
+      }
+      frame_count = wind_size;
+      std::vector<ObsPtr> empty_vec_o;
+      std::vector<EphemBasePtr> empty_vec_e;
+      gnss_meas_buf[frame_count].swap(empty_vec_o);
+      gnss_ephem_buf[frame_count].swap(empty_vec_e);
+      return false;
+    }
     anc_ecef = rough_xyzt.head<3>();
-    anc_local = pos_window[0]; // [WINDOW_SIZE]; // ?
+    anc_local = Rot_gnss_init.transpose() * pos_window[0]; // [WINDOW_SIZE]; // ?
     yaw_enu_local = 0.0;
     R_ecef_enu = ecef2rotation(anc_ecef);
     para_rcv_ddt[wind_size] = 128.0;
     for (uint32_t k_ = 0; k_ < 4; ++k_)
     {
-      para_rcv_dt[wind_size*4+k_] = rough_xyzt(3+k_);
+      if (dt_fail[k_])
+      {
+        para_rcv_dt[wind_size*4+k_] = rough_xyzt(3+dt_success);
+      }
+      else
+      {
+        para_rcv_dt[wind_size*4+k_] = rough_xyzt(3+k_);
+      }
     }
-    SetInit_quick();
+    SetInit();
     frame_num = 1; // frame_count;
     last_gnss_time = time2sec(gnss_meas_buf[wind_size][0]->time);
-
-    // for (uint32_t k_ = 2; k_ < wind_size+1; k_++)
-    // {
-    //   std::vector<ObsPtr>().swap(gnss_meas_buf[k_]);
-    //   std::vector<EphemBasePtr>().swap(gnss_ephem_buf[k_]);
-    // }
   }
 
   for (uint32_t k_ = 1; k_ < wind_size+1; k_++)
@@ -568,12 +468,12 @@ void GNSSProcess::updateGNSSStatistics(Eigen::Vector3d &pos) // delete
   {
     Eigen::Vector3d anc_cur;
     Eigen::Matrix3d R_enu_local_;
-    if (frame_num == 1)
-    {
-      anc_cur = anc_ecef;
-      R_enu_local_ = R_ecef_enu * Eigen::AngleAxisd(yaw_enu_local, Eigen::Vector3d::UnitZ()) * Rot_gnss_init;
-    }
-    else
+    // if (frame_num == 1)
+    // {
+    //   anc_cur = anc_ecef;
+    //   R_enu_local_ = R_ecef_enu * Eigen::AngleAxisd(yaw_enu_local, Eigen::Vector3d::UnitZ()) * Rot_gnss_init;
+    // }
+    // else
     {
       anc_cur = p_assign->isamCurrentEstimate.at<gtsam::Vector3>(E(0));
       R_enu_local_ = p_assign->isamCurrentEstimate.at<gtsam::Rot3>(P(0)).matrix();
@@ -764,19 +664,7 @@ bool GNSSProcess::Evaluate(state_input &state, Eigen::Vector3d &omg)
     // state.bg = p_assign->isamCurrentEstimate.at<gtsam::Vector12>(F(frame_num-1)).segment<3>(9);
     // state.gravity = state_.gravity; // ecef2rotation(state.pos) * gravity_init;
   }    
-  // state_ = state;
-  if (!nolidar && invalid_lidar)
-  {
-    state = state_;
-    // state.cov = MD(15, 15)::Identity() * 0.01;
-    printf("invalid lidar!!!!!!!");
-    // state.cov.setIdentity();
-    // state.cov.block<3, 3>(0, 0) = p_assign->isam.marginalCovariance(R(frame_num-1));
-    // state.cov.block<6, 6>(3, 3) = p_assign->isam.marginalCovariance(F(frame_num-1)).block<6, 6>(0, 0);
-    // state.cov.block<3, 3>(9, 9) = p_assign->isam.marginalCovariance(F(frame_num-1)).block<3, 3>(9, 9);
-    // state.cov.block<3, 3>(12, 12) = p_assign->isam.marginalCovariance(F(frame_num-1)).block<3, 3>(6, 6);
-    // invalid_lidar = false;
-  }
+  
   last_gnss_time = time_current;
   // state_ = state;
   // const std::vector<ObsPtr> &curr_obs = gnss_meas_buf[0];
@@ -896,19 +784,6 @@ bool GNSSProcess::Evaluate(state_output &state)
     // state.bg = p_assign->isamCurrentEstimate.at<gtsam::Vector12>(F(frame_num-1)).segment<3>(9);
     // state.gravity = state_.gravity; // ecef2rotation(state.pos) * gravity_init;
   }    
-  // state_ = state;
-  if (!nolidar && invalid_lidar)
-  {
-    state = state_const_;
-    // state.cov = MD(15, 15)::Identity() * 0.01;
-    printf("invalid lidar!!!!!!!");
-    // state.cov.setIdentity();
-    // state.cov.block<3, 3>(0, 0) = p_assign->isam.marginalCovariance(R(frame_num-1));
-    // state.cov.block<6, 6>(3, 3) = p_assign->isam.marginalCovariance(F(frame_num-1)).block<6, 6>(0, 0);
-    // state.cov.block<3, 3>(9, 9) = p_assign->isam.marginalCovariance(F(frame_num-1)).block<3, 3>(9, 9);
-    // state.cov.block<3, 3>(12, 12) = p_assign->isam.marginalCovariance(F(frame_num-1)).block<3, 3>(6, 6);
-    // invalid_lidar = false;
-  }
   last_gnss_time = time_current;
   std::map<std::pair<double, int>, std::map<uint32_t, double[6]>>::iterator it_old;
   if (!sat2cp.empty())
@@ -936,17 +811,27 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
   if (!nolidar)
   {
     invalid_lidar = nolidar_cur;
-    // for (size_t i = 0; i < 15; i++)
-    // {
-    //   if (state.cov(i, i) > 1.0) invalid_lidar = true;
-    // }
+    size_t num_norm = norm_vec_holder.size();
+    if (num_norm > 0)
+    {
+    Eigen::MatrixXd A(num_norm, 3);
+    for (size_t i = 0; i < num_norm; i++)
+    {
+      A.row(i) = norm_vec_holder[i].transpose();
+    }
+    std::vector<Eigen::Vector3d>().swap(norm_vec_holder);
+    BDCSVD<Eigen::MatrixXd> svd(A, ComputeThinU | ComputeThinV);
+    Eigen::VectorXd singular_values = svd.singularValues().cwiseAbs();
+    std::sort(singular_values.data(), singular_values.data() + singular_values.size(), std::greater<double>());
+    if (singular_values[2] / singular_values[0] < 1e-3) invalid_lidar = true;
+    }
   }
   if ((delta_t > 15 * gnss_sample_period && nolidar) || (delta_t > 15 * gnss_sample_period && invalid_lidar && !nolidar))
   {
     Reset();
     return false;
   }
-  if (nolidar_cur)nolidar_cur = false;
+  if (nolidar_cur) nolidar_cur = false;
   rcv_ddt = p_assign->isamCurrentEstimate.at<gtsam::Vector1>(C(frame_num-1))[0];
   rcv_dt[0] = p_assign->isamCurrentEstimate.at<gtsam::Vector4>(B(frame_num-1))[0] + rcv_ddt * delta_t;
   rcv_dt[1] = p_assign->isamCurrentEstimate.at<gtsam::Vector4>(B(frame_num-1))[1] + rcv_ddt * delta_t;
@@ -1133,8 +1018,8 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
     rcv_sys[sys_idx] = true;
     if (!nolidar)
     { 
-      // p_assign->gtSAMgraph.add(glio::GnssPsrDoppFactor(R(frame_num), A(frame_num), B(frame_num), C(frame_num), E(0), P(0), values, sys_idx, hat_omg_T, p_assign->robustpsrdoppNoise));
-      p_assign->gtSAMgraph.add(glio::GnssPsrDoppFactorPos(A(frame_num), B(frame_num), C(frame_num), E(0), P(0), values, sys_idx, rot_pos, hat_omg_T, p_assign->robustpsrdoppNoise));
+      // p_assign->gtSAMgraph.add(glio::GnssPsrDoppFactor(R(frame_num), A(frame_num), B(frame_num), C(frame_num), E(0), P(0), invalid_lidar, values, sys_idx, hat_omg_T, p_assign->robustpsrdoppNoise));
+      p_assign->gtSAMgraph.add(glio::GnssPsrDoppFactorPos(A(frame_num), B(frame_num), C(frame_num), E(0), P(0), invalid_lidar, values, sys_idx, rot_pos, hat_omg_T, p_assign->robustpsrdoppNoise));
     }
     else
     {    
@@ -1145,21 +1030,21 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
     id_accumulate += 1;
   }
   sat2cp[std::pair<double, int>(time2sec(curr_obs[0]->time), frame_num)] = curr_cp_map;
-  if (frame_num == 1 && !nolidar)
-  {
-    Eigen::Matrix3d R_enu_local_;
-    R_enu_local_ = R_ecef_enu * Rot_gnss_init; // Eigen::AngleAxisd(yaw_enu_local, Eigen::Vector3d::UnitZ()) * 
-    p_assign->initialEstimate.insert(E(0), gtsam::Vector3(anc_ecef[0], anc_ecef[1], anc_ecef[2]));
-    p_assign->initialEstimate.insert(P(0), gtsam::Rot3(R_enu_local_));
+  // if (frame_num == 1 && !nolidar)
+  // {
+  //   Eigen::Matrix3d R_enu_local_;
+  //   R_enu_local_ = R_ecef_enu * Rot_gnss_init; // Eigen::AngleAxisd(yaw_enu_local, Eigen::Vector3d::UnitZ()) * 
+  //   p_assign->initialEstimate.insert(E(0), gtsam::Vector3(anc_ecef[0], anc_ecef[1], anc_ecef[2]));
+  //   p_assign->initialEstimate.insert(P(0), gtsam::Rot3(R_enu_local_));
 
-    gtsam::PriorFactor<gtsam::Rot3> init_rot_ext(P(0), gtsam::Rot3(gtsam::Rot3(R_enu_local_)), p_assign->margrotNoise);
-    gtsam::PriorFactor<gtsam::Vector3> init_pos_ext(E(0), gtsam::Vector3(anc_ecef[0], anc_ecef[1], anc_ecef[2]), p_assign->margNoise);
-    p_assign->gtSAMgraph.add(init_rot_ext);
-    p_assign->gtSAMgraph.add(init_pos_ext);
-    p_assign->factor_id_frame[frame_num-1].push_back(id_accumulate);
-    p_assign->factor_id_frame[frame_num-1].push_back(id_accumulate+1);
-    id_accumulate += 2;
-  }
+  //   gtsam::PriorFactor<gtsam::Rot3> init_rot_ext(P(0), gtsam::Rot3(gtsam::Rot3(R_enu_local_)), p_assign->margrotNoise);
+  //   gtsam::PriorFactor<gtsam::Vector3> init_pos_ext(E(0), gtsam::Vector3(anc_ecef[0], anc_ecef[1], anc_ecef[2]), p_assign->margNoise);
+  //   p_assign->gtSAMgraph.add(init_rot_ext);
+  //   p_assign->gtSAMgraph.add(init_pos_ext);
+  //   p_assign->factor_id_frame[frame_num-1].push_back(id_accumulate);
+  //   p_assign->factor_id_frame[frame_num-1].push_back(id_accumulate+1);
+  //   id_accumulate += 2;
+  // }
   p_assign->gtSAMgraph.add(glio::DdtSmoothFactor(C(frame_num-1), C(frame_num), p_assign->ddtNoise));
   // p_assign->gtSAMgraph.add(gtsam::PriorFactor<gtsam::Vector1>(C(frame_num), gtsam::Vector1(rcv_ddt), p_assign->ddtNoise));
   p_assign->gtSAMgraph.add(glio::DtDdtFactor(B(frame_num-1), B(frame_num), C(frame_num-1), C(frame_num), rcv_sys, delta_t, p_assign->dtNoise)); // not work
@@ -1171,17 +1056,32 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
     // Eigen::Matrix<double, 15, 15> state_cov = Eigen::Matrix<double, 15, 15>::Identity();
     // state_cov.block<9, 9>(0, 0) = state.cov.block<9, 9>(0, 0) * 100;
     // gtsam::noiseModel::Gaussian::shared_ptr LioNoise = gtsam::noiseModel::Gaussian::Covariance(state_cov); 
-    // p_assign->gtSAMgraph.add(glio::GnssLioFactor(R(frame_num-1), A(frame_num-1), R(frame_num), A(frame_num), 1.0, rel_rot, rel_pos, rel_vel,
-    //                 state_gravity, delta_t, p_assign->odomNoise)); // odomNoiseIMU)); // LioNoise)); // 
-    // p_assign->factor_id_frame[frame_num-1-frame_delete].push_back(id_accumulate);
-    // id_accumulate += 1;
-    // gtSAMgraph.add(glio::GnssLioGravFactor(R(frame_num), cur_grav, state.gravity, odomNoise));
-    // Eigen::Matrix<double, 15, 15> state_cov = Eigen::Matrix<double, 15, 15>::Identity(); 
-    // state_cov.block<9, 9>(0, 0) = state.cov.block<9, 9>(0, 0) * 1000;
-    // gtsam::noiseModel::Gaussian::shared_ptr LioNoise = gtsam::noiseModel::Gaussian::Covariance(state_cov);
-    p_assign->gtSAMgraph.add(glio::GnssLioHardFactor(R(frame_num), A(frame_num), ba, bg, rot, p_assign->margposNoise)); //LioNoise)); // odomNoiseIMU));
-    factor_id_cur.push_back(id_accumulate);
-    id_accumulate += 1;
+    if (invalid_lidar)
+    {
+      p_assign->gtSAMgraph.add(glio::GnssLioFactor(R(frame_num-1), A(frame_num-1), R(frame_num), A(frame_num), 1.0, rel_rot, rel_pos, rel_vel,
+                      state_gravity, delta_t, p_assign->odomNoise)); // odomNoiseIMU)); // LioNoise)); // 
+      p_assign->factor_id_frame[frame_num-1-frame_delete].push_back(id_accumulate);
+      id_accumulate += 1;
+      Eigen::Vector3d anc_cur = p_assign->isamCurrentEstimate.at<gtsam::Vector3>(E(0));
+      Eigen::Matrix3d R_enu_local_ = p_assign->isamCurrentEstimate.at<gtsam::Rot3>(P(0)).matrix();
+      gtsam::PriorFactor<gtsam::Rot3> init_rot_ext(P(0), gtsam::Rot3(gtsam::Rot3(R_enu_local_)), p_assign->margrotNoise);
+      gtsam::PriorFactor<gtsam::Vector3> init_pos_ext(E(0), gtsam::Vector3(anc_cur[0], anc_cur[1], anc_cur[2]), p_assign->margNoise);
+      p_assign->gtSAMgraph.add(init_rot_ext);
+      p_assign->gtSAMgraph.add(init_pos_ext);
+      factor_id_cur.push_back(id_accumulate);
+      factor_id_cur.push_back(id_accumulate+1);
+      id_accumulate += 2;
+    }
+    else
+    {
+      // gtSAMgraph.add(glio::GnssLioGravFactor(R(frame_num), cur_grav, state.gravity, odomNoise));
+      // Eigen::Matrix<double, 15, 15> state_cov = Eigen::Matrix<double, 15, 15>::Identity(); 
+      // state_cov.block<9, 9>(0, 0) = state.cov.block<9, 9>(0, 0) * 1000;
+      // gtsam::noiseModel::Gaussian::shared_ptr LioNoise = gtsam::noiseModel::Gaussian::Covariance(state_cov);
+      p_assign->gtSAMgraph.add(glio::GnssLioHardFactor(R(frame_num), A(frame_num), ba, bg, rot, p_assign->margposNoise)); //LioNoise)); // odomNoiseIMU));
+      factor_id_cur.push_back(id_accumulate);
+      id_accumulate += 1;
+    }
     // gtSAMgraph.add(glio::GnssLioFactorNolidar(R(frame_num-1), F(frame_num-1), R(frame_num), F(frame_num), rel_rot, rel_pos, rel_v, 
     //               state_.gravity, delta_t, state_.ba, state_.bg, pre_integration, odomNoiseIMU));
     // factor_id_frame[frame_num-1-frame_delete].push_back(id_accumulate);
@@ -1206,9 +1106,9 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
     values[18] = meas_cp_best - meas_cp[j] - meas_sats[j]; values[19] = cp_weight; 
     if (!nolidar)
     {
-      // p_assign->gtSAMgraph.add(glio::GnssCpFactor(E(0), P(0), R(meas_index_sats[j]), A(meas_index_sats[j]), R(frame_num), A(frame_num), values, p_assign->robustcpNoise));
+      // p_assign->gtSAMgraph.add(glio::GnssCpFactor(E(0), P(0), R(meas_index_sats[j]), A(meas_index_sats[j]), R(frame_num), A(frame_num), invalid_lidar, values, p_assign->robustcpNoise));
       Eigen::Matrix3d rot_before = p_assign->isamCurrentEstimate.at<gtsam::Rot3>(R(meas_index_sats[j])).matrix();
-      p_assign->gtSAMgraph.add(glio::GnssCpFactorPos(E(0), P(0), A(meas_index_sats[j]), A(frame_num), values, rot_before, rot_pos, p_assign->robustcpNoise));
+      p_assign->gtSAMgraph.add(glio::GnssCpFactorPos(E(0), P(0), A(meas_index_sats[j]), A(frame_num), invalid_lidar, values, rot_before, rot_pos, p_assign->robustcpNoise));
     }
     else
     {
@@ -1256,9 +1156,8 @@ void GNSSProcess::SetInit()
 {
   if (!nolidar)
   {
-    anc_local = Rot_gnss_init.transpose() * anc_local;
     Eigen::Matrix3d R_enu_local_;
-    R_enu_local_ = R_ecef_enu * Eigen::AngleAxisd(yaw_enu_local, Eigen::Vector3d::UnitZ()) * Rot_gnss_init;
+    R_enu_local_ = R_ecef_enu * Rot_gnss_init; // * Eigen::AngleAxisd(yaw_enu_local, Eigen::Vector3d::UnitZ()) 
     // prior factor 
     Eigen::Matrix<double, 6, 1> init_vel_bias_vector;
     init_vel_bias_vector.block<3,1>(0,0) = Rot_gnss_init.transpose() * pos_window[wind_size];
@@ -1273,11 +1172,11 @@ void GNSSProcess::SetInit()
     // p_assign->initialEstimate.insert(C(0), gtsam::Vector1(para_rcv_ddt[wind_size]));
     p_assign->initialEstimate.insert(C(0), gtsam::Vector1(0.0));
     // p_assign->initialEstimate.insert(Y(0), gtsam::Vector1(yaw_enu_local));
-    // p_assign->initialEstimate.insert(E(0), gtsam::Vector3(anc_ecef[0], anc_ecef[1], anc_ecef[2]));
-    // p_assign->initialEstimate.insert(P(0), gtsam::Rot3(R_enu_local_));
+    p_assign->initialEstimate.insert(E(0), gtsam::Vector3(anc_ecef[0], anc_ecef[1], anc_ecef[2]));
+    p_assign->initialEstimate.insert(P(0), gtsam::Rot3(R_enu_local_));
 
-    // gtsam::PriorFactor<gtsam::Rot3> init_rot_ext(P(0), gtsam::Rot3(gtsam::Rot3(R_enu_local_)), p_assign->margrotNoise);
-    // gtsam::PriorFactor<gtsam::Vector3> init_pos_ext(E(0), gtsam::Vector3(anc_ecef[0], anc_ecef[1], anc_ecef[2]), p_assign->margNoise);
+    gtsam::PriorFactor<gtsam::Rot3> init_rot_ext(P(0), gtsam::Rot3(gtsam::Rot3(R_enu_local_)), p_assign->margrotNoise);
+    gtsam::PriorFactor<gtsam::Vector3> init_pos_ext(E(0), gtsam::Vector3(anc_ecef[0], anc_ecef[1], anc_ecef[2]), p_assign->margNoise);
     gtsam::PriorFactor<gtsam::Vector4> init_dt(B(0), gtsam::Vector4(para_rcv_dt[wind_size*4], para_rcv_dt[wind_size*4+1], para_rcv_dt[wind_size*4+2], para_rcv_dt[wind_size*4+3]), p_assign->priordtNoise);
     // gtsam::PriorFactor<gtsam::Vector4> init_dt(B(0), gtsam::Vector4(0.0, 0.0, 0.0, 0.0), p_assign->priordtNoise);
     // gtsam::PriorFactor<gtsam::Vector1> init_ddt(C(0), gtsam::Vector1(para_rcv_ddt[wind_size]), p_assign->priorddtNoise);
@@ -1285,100 +1184,38 @@ void GNSSProcess::SetInit()
     gtsam::PriorFactor<gtsam::Rot3> init_rot_(R(0), gtsam::Rot3(Rot_gnss_init.transpose() * rot_window[wind_size]), p_assign->priorrotNoise);
     gtsam::PriorFactor<gtsam::Vector6> init_vel_(A(0), gtsam::Vector6(init_vel_bias_vector), p_assign->priorNoise); // priorposNoise);
     // gtsam::PriorFactor<gtsam::Vector12> init_vel_(F(0), gtsam::Vector12(init_vel_bias_vector), priorposNoise);
-    // p_assign->gtSAMgraph.add(init_rot_ext);
-    // p_assign->gtSAMgraph.add(init_pos_ext);
+    p_assign->gtSAMgraph.add(init_rot_ext);
+    p_assign->gtSAMgraph.add(init_pos_ext);
     p_assign->gtSAMgraph.add(init_dt);
     p_assign->gtSAMgraph.add(init_ddt);
     p_assign->gtSAMgraph.add(init_rot_);
     p_assign->gtSAMgraph.add(init_vel_);
-    p_assign->factor_id_frame.push_back(std::vector<size_t>{0, 1, 2, 3}); //, 4, 5});
-    id_accumulate += 4;
+    p_assign->factor_id_frame.push_back(std::vector<size_t>{0, 1, 2, 3, 4, 5});
+    id_accumulate += 6;
   }
   else
   {
-    Eigen::Matrix3d R_enu_local_;
-    R_enu_local_ = Eigen::AngleAxisd(yaw_enu_local, Eigen::Vector3d::UnitZ());
+  //   Eigen::Matrix3d R_enu_local_;
+  //   R_enu_local_ = Eigen::AngleAxisd(yaw_enu_local, Eigen::Vector3d::UnitZ());
     // dt[0] = para_rcv_dt[wind_size*4], dt[1] = para_rcv_dt[wind_size*4+1], dt[2] = para_rcv_dt[wind_size*4+2], dt[3] = para_rcv_dt[wind_size*4+3];
     // ddt = para_rcv_ddt[wind_size];
-    gtsam::PriorFactor<gtsam::Rot3> init_rot(R(0), gtsam::Rot3(R_ecef_enu * R_enu_local_ * rot_window[wind_size]), p_assign->priorrotNoise);
+    gtsam::PriorFactor<gtsam::Rot3> init_rot(R(0), gtsam::Rot3(R_ecef_enu * rot_window[wind_size]), p_assign->priorrotNoise); //  * R_enu_local_
     Eigen::Matrix<double, 12, 1> init_vel_bias_vector;
-    init_vel_bias_vector.block<3,1>(0,0) = anc_ecef + R_ecef_enu * R_enu_local_ * (pos_window[wind_size] - pos_window[0] - rot_window[wind_size] * Tex_imu_r);
-    init_vel_bias_vector.block<3,1>(3,0) = R_ecef_enu * R_enu_local_ * vel_window[wind_size];
+    init_vel_bias_vector.block<3,1>(0,0) = anc_ecef + R_ecef_enu * (pos_window[wind_size] - pos_window[0] - rot_window[wind_size] * Tex_imu_r); //  * R_enu_local_
+    init_vel_bias_vector.block<3,1>(3,0) = R_ecef_enu * vel_window[wind_size]; // R_enu_local_ * 
     init_vel_bias_vector.block<6,1>(6,0) = Eigen::Matrix<double, 6, 1>::Zero();
     gtsam::PriorFactor<gtsam::Vector12> init_vel_bias(F(0), gtsam::Vector12(init_vel_bias_vector), p_assign->priorposNoise);
     gtsam::PriorFactor<gtsam::Vector4> init_dt(B(0), gtsam::Vector4(para_rcv_dt[wind_size*4], para_rcv_dt[wind_size*4+1], para_rcv_dt[wind_size*4+2], para_rcv_dt[wind_size*4+3]), p_assign->priordtNoise);
-    gtsam::PriorFactor<gtsam::Vector1> init_ddt(C(0), gtsam::Vector1(para_rcv_ddt[wind_size]), p_assign->priorddtNoise);
+    gtsam::PriorFactor<gtsam::Vector1> init_ddt(C(0), gtsam::Vector1(0.0), p_assign->priorddtNoise); // para_rcv_ddt[wind_size]
     p_assign->gtSAMgraph.add(init_rot);
     p_assign->gtSAMgraph.add(init_vel_bias);
     p_assign->gtSAMgraph.add(init_dt);
     p_assign->gtSAMgraph.add(init_ddt);
     p_assign->factor_id_frame.push_back(std::vector<size_t>{0, 1, 2, 3}); //{i * 4, i * 4 + 1, i * 4  + 2, i * 4 + 3});
-    p_assign->initialEstimate.insert(R(0), gtsam::Rot3(R_ecef_enu * R_enu_local_ * rot_window[wind_size]));
+    p_assign->initialEstimate.insert(R(0), gtsam::Rot3(R_ecef_enu * rot_window[wind_size])); // R_enu_local_ * 
     p_assign->initialEstimate.insert(F(0), gtsam::Vector12(init_vel_bias_vector));
     p_assign->initialEstimate.insert(B(0), gtsam::Vector4(para_rcv_dt[wind_size*4], para_rcv_dt[wind_size*4+1], para_rcv_dt[wind_size*4+2], para_rcv_dt[wind_size*4+3]));
-    p_assign->initialEstimate.insert(C(0), gtsam::Vector1(para_rcv_ddt[wind_size]));
+    p_assign->initialEstimate.insert(C(0), gtsam::Vector1(0.0)); // para_rcv_ddt[wind_size]
     id_accumulate += 4;
-  }
-}
-
-void GNSSProcess::SetInit_quick()
-{
-  // use gtsam
-  if (!nolidar)
-  {
-    anc_local = Rot_gnss_init.transpose() * anc_local;
-    Eigen::Matrix3d R_enu_local_;
-    R_enu_local_ = R_ecef_enu * Eigen::AngleAxisd(yaw_enu_local, Eigen::Vector3d::UnitZ()) * Rot_gnss_init;  
-    // dt[0] = para_rcv_dt[wind_size*4]; dt[1] = para_rcv_dt[wind_size*4+1]; dt[2] = para_rcv_dt[wind_size*4+2]; dt[3] = para_rcv_dt[wind_size*4+3];
-    // ddt = para_rcv_ddt[wind_size];
-    Eigen::Matrix<double, 6, 1> init_vel_bias_vector;
-    init_vel_bias_vector.block<3,1>(0,0) = Rot_gnss_init.transpose() * pos_window[wind_size];
-    init_vel_bias_vector.block<3,1>(3,0) = Rot_gnss_init.transpose() * vel_window[wind_size];
-    // init_vel_bias_vector.block<6,1>(6,0) = Eigen::Matrix<double, 6, 1>::Zero();
-    // gtsam::PriorFactor<gtsam::Vector3> init_anc(E(0), gtsam::Vector3(anc_ecef[0], anc_ecef[1], anc_ecef[2]),p_assign->margNoise); // a bug
-    // gtsam::PriorFactor<gtsam::Rot3> init_ext_rot(P(0), gtsam::Rot3(R_enu_local_), p_assign->margrotNoise); // a bug
-    // p_assign->gtSAMgraph.add(init_anc);
-    // p_assign->gtSAMgraph.add(init_ext_rot);
-    // p_assign->initialEstimate.insert(E(0), gtsam::Vector3(anc_ecef[0], anc_ecef[1], anc_ecef[2]));
-    // p_assign->initialEstimate.insert(P(0), gtsam::Rot3(R_enu_local_));
-    // gtsam::PriorFactor<gtsam::Vector12> init_pos(F(0), gtsam::Vector12(init_vel_bias_vector), priorposNoise);
-    gtsam::PriorFactor<gtsam::Vector6> init_pos(A(0), gtsam::Vector6(init_vel_bias_vector), p_assign->priorNoise); // priorposNoise);
-    gtsam::PriorFactor<gtsam::Rot3> init_rot(R(0), gtsam::Rot3(Rot_gnss_init.transpose() * rot_window[wind_size]), p_assign->priorrotNoise);
-    gtsam::PriorFactor<gtsam::Vector4> init_dt(B(0), gtsam::Vector4(para_rcv_dt[wind_size*4], para_rcv_dt[wind_size*4+1], para_rcv_dt[wind_size*4+2], para_rcv_dt[wind_size*4+3]), p_assign->priordtNoise);
-    p_assign->factor_id_frame.push_back(std::vector<size_t>{0, 1, 2}); //, 3, 4});
-    p_assign->initialEstimate.insert(R(0), gtsam::Rot3(Rot_gnss_init.transpose() * rot_window[wind_size]));
-    p_assign->initialEstimate.insert(A(0), gtsam::Vector6(init_vel_bias_vector));
-    // p_assign->initialEstimate.insert(F(0), gtsam::Vector12(init_vel_bias_vector));
-    p_assign->initialEstimate.insert(B(0), gtsam::Vector4(para_rcv_dt[wind_size*4], para_rcv_dt[wind_size*4+1], para_rcv_dt[wind_size*4+2], para_rcv_dt[wind_size*4+3]));
-    p_assign->initialEstimate.insert(C(0), gtsam::Vector1(para_rcv_ddt[wind_size]));
-    p_assign->gtSAMgraph.add(init_rot); // no rotation as well, so pos should be divided into rot and trans, or cov should be modified.
-    p_assign->gtSAMgraph.add(init_pos);
-    p_assign->gtSAMgraph.add(init_dt);
-    id_accumulate += 3;
-  }
-  else
-  {   
-    Eigen::Matrix3d R_enu_local_;
-    R_enu_local_ = Eigen::AngleAxisd(yaw_enu_local, Eigen::Vector3d::UnitZ());   
-    // dt[0] = para_rcv_dt[wind_size*4]; dt[1] = para_rcv_dt[wind_size*4+1]; dt[2] = para_rcv_dt[wind_size*4+2]; dt[3] = para_rcv_dt[wind_size*4+3];
-    // ddt = para_rcv_ddt[wind_size];
-    gtsam::PriorFactor<gtsam::Rot3> init_rot(R(0), gtsam::Rot3(R_ecef_enu * R_enu_local_ * rot_window[wind_size]), p_assign->priorrotNoise);
-    gtsam::PriorFactor<gtsam::Vector4> init_dt(B(0), gtsam::Vector4(para_rcv_dt[wind_size*4], para_rcv_dt[wind_size*4+1], para_rcv_dt[wind_size*4+2], para_rcv_dt[wind_size*4+3]), p_assign->priordtNoise);
-    p_assign->gtSAMgraph.add(init_rot);
-    p_assign->gtSAMgraph.add(init_dt);
-    p_assign->factor_id_frame.push_back(std::vector<size_t>{0, 1, 2}); //{i * 3, i * 3 + 1, i * 3 + 2});
-    Eigen::Matrix<double, 12, 1> init_vel_bias_vector;
-    init_vel_bias_vector.block<3,1>(0,0) = anc_ecef + R_ecef_enu * R_enu_local_ * (pos_window[wind_size] - pos_window[0] - rot_window[wind_size] * Tex_imu_r);
-    init_vel_bias_vector.block<3,1>(3,0) = R_ecef_enu * R_enu_local_ * vel_window[wind_size];
-    init_vel_bias_vector.block<6,1>(6,0) = Eigen::Matrix<double, 6, 1>::Zero();
-    gtsam::PriorFactor<gtsam::Vector12> init_pos(F(0), gtsam::Vector12(init_vel_bias_vector), p_assign->priorposNoise);
-    p_assign->gtSAMgraph.add(init_pos);
-    p_assign->gtSAMgraph.add(init_dt);
-    
-    p_assign->initialEstimate.insert(R(0), gtsam::Rot3(R_ecef_enu * R_enu_local_ * rot_window[wind_size]));
-    p_assign->initialEstimate.insert(F(0), gtsam::Vector12(init_vel_bias_vector));
-    p_assign->initialEstimate.insert(B(0), gtsam::Vector4(para_rcv_dt[wind_size*4], para_rcv_dt[wind_size*4+1], para_rcv_dt[wind_size*4+2], para_rcv_dt[wind_size*4+3]));
-    p_assign->initialEstimate.insert(C(0), gtsam::Vector1(para_rcv_ddt[wind_size]));
-    id_accumulate += 3;
   }
 }

@@ -29,9 +29,9 @@ class GnssPsrDoppFactor : public gtsam::NoiseModelFactor6<gtsam::Rot3, gtsam::Ve
     public: 
         // EIGEN_MAKE_ALIGNED_OPERATOR_NEW
         // GnssPsrDoppFactor() = delete;
-        GnssPsrDoppFactor(gtsam::Key j1, gtsam::Key j2, gtsam::Key j3, gtsam::Key j4, gtsam::Key j5, gtsam::Key j6, double values_[30], int sys_idx_, 
+        GnssPsrDoppFactor(gtsam::Key j1, gtsam::Key j2, gtsam::Key j3, gtsam::Key j4, gtsam::Key j5, gtsam::Key j6, bool invalid_lidar_, double values_[30], int sys_idx_, 
         Eigen::Vector3d hat_omg_T_, const gtsam::SharedNoiseModel& model) :
-        hat_omg_T(hat_omg_T_), sys_idx(sys_idx_),
+        hat_omg_T(hat_omg_T_), sys_idx(sys_idx_), invalid_lidar(invalid_lidar_),
         gtsam::NoiseModelFactor6<gtsam::Rot3, gtsam::Vector6, gtsam::Vector4, gtsam::Vector1, gtsam::Vector3, gtsam::Rot3>(model, j1, j2, j3, j4, j5, j6) {
             Tex_imu_r << values_[0], values_[1], values_[2];
             anc_local << values_[3], values_[4], values_[5];
@@ -196,18 +196,21 @@ class GnssPsrDoppFactor : public gtsam::NoiseModelFactor6<gtsam::Rot3, gtsam::Ve
                     //     vecV(2), 0.0, -vecV(0),
                     //     -vecV(1), vecV(0), 0.0;
                     (*H5) = gtsam::Matrix::Zero(2,3);
-
+                    if (!invalid_lidar)
+                    {
                     (*H5).block<1,3>(0,0) = -rcv2sat_unit.transpose() * pr_weight;
                     // (*H5).block<1,3>(0,0) = -rcv2sat_unit.transpose() * (Eye3d + R_ecef_enu_cur * hatP * R1TE3 * vecLon.transpose() - R_ecef_enu_cur * hatP * E1 * vecLat.transpose()) * pr_weight;
                     (*H5).block<1,3>(1,0) = (sv_vel-V_ecef).transpose() * unit2rcv_pos * dp_weight;
                     // (*H5).block<1,3>(1,0) = (sv_vel-V_ecef).transpose() * unit2rcv_pos * (Eye3d + R_ecef_enu_cur * hatP * R1TE3 * vecLon.transpose() - R_ecef_enu_cur * hatP * E1 * vecLat.transpose()) * dp_weight
                                             // + rcv2sat_unit.transpose() * (-1.0) * (R_ecef_enu_cur * hatV * R1TE3 * vecLon.transpose() - R_ecef_enu_cur * hatV * E1 * vecLat.transpose()) * dp_weight;             
-                
+                    }
                 }
 
                 if (H6)
                 {
                     (*H6) = gtsam::Matrix::Zero(2,3);
+                    if (!invalid_lidar)
+                    {
                     Eigen::Vector3d pos_v = local_pos - anc_local;
                     Eigen::Matrix3d d_pos, d_vel;
                     if (pos_vel_bias.segment<3>(3).norm() > 0.3)
@@ -238,6 +241,7 @@ class GnssPsrDoppFactor : public gtsam::NoiseModelFactor6<gtsam::Rot3, gtsam::Ve
                     (*H6).block<1,3>(1,0) = rcv2sat_unit.transpose() * (R_ecef_local * d_vel) * dp_weight - (sv_vel-V_ecef).transpose() * unit2rcv_pos * 
                                     R_ecef_local * d_pos * dp_weight;
                     // printf("check hessian:%f, %f, %f\n", (*H6)(0, 0), (*H6)(0, 1), (*H6)(0, 2));
+                    }
                 }
                 return residual;
             }
@@ -247,6 +251,7 @@ class GnssPsrDoppFactor : public gtsam::NoiseModelFactor6<gtsam::Rot3, gtsam::Ve
         double svdt, tgd, svddt, pr_uura, dp_uura, relative_sqrt_info, time_current, freq, psr_measured, dopp_measured;
         std::vector<double> latest_gnss_iono_params;
         int sys_idx;
+        bool invalid_lidar;
 };
 }
 

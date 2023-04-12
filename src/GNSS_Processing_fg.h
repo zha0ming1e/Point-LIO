@@ -29,7 +29,6 @@ class GNSSProcess
   void processIMU(double dt, const Vector3d &linear_acceleration, const Vector3d &angular_velocity);
   Eigen::Vector3d local2enu(Eigen::Matrix3d enu_rot, Eigen::Vector3d anc, Eigen::Vector3d &pos);
   void SetInit();
-  void SetInit_quick();
   bool AddFactor(gtsam::Rot3 rel_rot_, gtsam::Point3 rel_pos_, gtsam::Vector3 rel_v_, Eigen::Vector3d state_gravity, double delta_t, double time_current,
                 Eigen::Vector3d ba, Eigen::Vector3d bg, Eigen::Vector3d omg, Eigen::Matrix3d rot);
   std::map<std::pair<double, int>, std::map<uint32_t, double[6]>> sat2cp; // 
@@ -66,9 +65,9 @@ class GNSSProcess
   int frame_count; //
   int delete_thred;
   int wind_size = WINDOW_SIZE;
-  bool quick_init = false;
   bool nolidar = false;
   bool nolidar_cur;
+  std::vector<Eigen::Vector3d> norm_vec_holder;
   // double para_yaw_enu_local[1];
   double para_rcv_dt[(WINDOW_SIZE+1)*4] = {0}; //
   double para_rcv_ddt[WINDOW_SIZE+1] = {0}; //
