@@ -273,7 +273,7 @@ void publish_frame_world(const ros::Publisher & pubLaserCloudFullRes)
     if (scan_pub_en)
     {
         PointCloudXYZI::Ptr laserCloudFullRes(feats_down_body);
-        int size = laserCloudFullRes->points.size();
+        int size = laserCloudFullRes->points.size() / 3;
 
         PointCloudXYZI::Ptr   laserCloudWorld(new PointCloudXYZI(size, 1));
         
@@ -281,10 +281,10 @@ void publish_frame_world(const ros::Publisher & pubLaserCloudFullRes)
         {
             // if (i % 3 == 0)
             // {
-            laserCloudWorld->points[i].x = feats_down_world->points[i].x;
-            laserCloudWorld->points[i].y = feats_down_world->points[i].y;
-            laserCloudWorld->points[i].z = feats_down_world->points[i].z;
-            laserCloudWorld->points[i].intensity = feats_down_world->points[i].intensity; // feats_down_world->points[i].y; // 
+            laserCloudWorld->points[i].x = feats_down_world->points[i*3].x;
+            laserCloudWorld->points[i].y = feats_down_world->points[i*3].y;
+            laserCloudWorld->points[i].z = feats_down_world->points[i*3].z;
+            laserCloudWorld->points[i].intensity = feats_down_world->points[i*3].intensity; // feats_down_world->points[i].y; // 
             // }
         }
         sensor_msgs::PointCloud2 laserCloudmsg;

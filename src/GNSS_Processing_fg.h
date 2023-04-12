@@ -31,7 +31,7 @@ class GNSSProcess
   void SetInit();
   void SetInit_quick();
   bool AddFactor(gtsam::Rot3 rel_rot_, gtsam::Point3 rel_pos_, gtsam::Vector3 rel_v_, Eigen::Vector3d state_gravity, double delta_t, double time_current,
-                Eigen::Vector3d ba, Eigen::Vector3d bg, Eigen::Vector3d omg);
+                Eigen::Vector3d ba, Eigen::Vector3d bg, Eigen::Vector3d omg, Eigen::Matrix3d rot);
   std::map<std::pair<double, int>, std::map<uint32_t, double[6]>> sat2cp; // 
   std::vector<ObsPtr> gnss_meas_buf[WINDOW_SIZE+1]; //
   std::vector<EphemBasePtr> gnss_ephem_buf[WINDOW_SIZE+1]; // 

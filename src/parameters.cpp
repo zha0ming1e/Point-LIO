@@ -282,7 +282,7 @@ void set_gnss_offline_init(bool nolidar_)
         gtsam::PriorFactor<gtsam::Rot3> init_rot_(R(0), gtsam::Rot3(rot_init), p_gnss->p_assign->priorrotNoise);
         gtsam::PriorFactor<gtsam::Vector6> init_vel_(A(0), gtsam::Vector6(init_vel_bias_vector), p_gnss->p_assign->priorNoise);
         // gtsam::PriorFactor<gtsam::Vector12> init_vel_(F(0), gtsam::Vector12(init_vel_bias_vector), p_gnss->priorposNoise);
-        gtsam::PriorFactor<gtsam::Rot3> init_rot_ext(P(0), gtsam::Rot3(R_enu_local_), p_gnss->p_assign->priorrotNoise);
+        gtsam::PriorFactor<gtsam::Rot3> init_rot_ext(P(0), gtsam::Rot3(R_enu_local_), p_gnss->p_assign->margrotNoise);
         gtsam::PriorFactor<gtsam::Vector3> init_pos_ext(E(0), gtsam::Vector3(offline_init_vec[0], offline_init_vec[1], offline_init_vec[2]), p_gnss->p_assign->margNoise);
         gtsam::PriorFactor<gtsam::Vector4> init_dt_(B(0), gtsam::Vector4(offline_init_vec[5], offline_init_vec[6], offline_init_vec[7], offline_init_vec[8]), p_gnss->p_assign->priordtNoise);
         gtsam::PriorFactor<gtsam::Vector1> init_ddt_(C(0), gtsam::Vector1(offline_init_vec[4]), p_gnss->p_assign->priorddtNoise);
