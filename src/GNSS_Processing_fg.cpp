@@ -139,7 +139,7 @@ void GNSSProcess::processGNSS(const std::vector<ObsPtr> &gnss_meas, state_input 
 
   if (gnss_ready)
   {
-    Eigen::Vector3d pos_gnss = state.pos + state.rot.normalized().toRotationMatrix() * Tex_imu_r;
+    Eigen::Vector3d pos_gnss = state.pos + state.rot * Tex_imu_r;
     updateGNSSStatistics(pos_gnss);
   }
   p_assign->processGNSSBase(gnss_meas, valid_meas, valid_ephems, gnss_ready, ecef_pos);
@@ -149,7 +149,7 @@ void GNSSProcess::processGNSS(const std::vector<ObsPtr> &gnss_meas, state_input 
     if (valid_meas.empty() || valid_meas.size() < 5) return; // right or not?
     {
       rot_window[frame_count] = state.rot.normalized().toRotationMatrix();
-      pos_window[frame_count] = state.pos + state.rot.normalized().toRotationMatrix() * Tex_imu_r;
+      pos_window[frame_count] = state.pos + state.rot * Tex_imu_r;
       Eigen::Matrix3d omg_skew;
       omg_skew << SKEW_SYM_MATRX(omg);
       vel_window[frame_count] = state.vel + state.rot.normalized().toRotationMatrix() * omg_skew * Tex_imu_r;
@@ -191,7 +191,7 @@ void GNSSProcess::processGNSS(const std::vector<ObsPtr> &gnss_meas, state_output
 
   if (gnss_ready)
   {
-    Eigen::Vector3d pos_gnss = state.pos + state.rot.normalized().toRotationMatrix() * Tex_imu_r;
+    Eigen::Vector3d pos_gnss = state.pos + state.rot * Tex_imu_r;
     updateGNSSStatistics(pos_gnss);
   }
   p_assign->processGNSSBase(gnss_meas, valid_meas, valid_ephems, gnss_ready, ecef_pos);
@@ -201,7 +201,7 @@ void GNSSProcess::processGNSS(const std::vector<ObsPtr> &gnss_meas, state_output
     if (valid_meas.empty() || valid_meas.size() < 5) return; // right or not?
     {
       rot_window[frame_count] = state.rot.normalized().toRotationMatrix();
-      pos_window[frame_count] = state.pos + state.rot.normalized().toRotationMatrix() * Tex_imu_r;
+      pos_window[frame_count] = state.pos + state.rot * Tex_imu_r;
       Eigen::Matrix3d omg_skew;
       omg_skew << SKEW_SYM_MATRX(state.omg);
       vel_window[frame_count] = state.vel + state.rot.normalized().toRotationMatrix() * omg_skew * Tex_imu_r;

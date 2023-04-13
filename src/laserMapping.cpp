@@ -141,12 +141,12 @@ void lasermap_fov_segment()
     if (use_imu_as_input)
     {
         state_in = kf_input.x_;
-        pos_LiD = state_in.pos + state_in.rot.normalized().toRotationMatrix() * Lidar_T_wrt_IMU;
+        pos_LiD = state_in.pos + state_in.rot * Lidar_T_wrt_IMU;
     }
     else
     {
         state_out = kf_output.x_;
-        pos_LiD = state_out.pos + state_out.rot.normalized().toRotationMatrix() * Lidar_T_wrt_IMU;
+        pos_LiD = state_out.pos + state_out.rot * Lidar_T_wrt_IMU;
     }
     if (!Localmap_Initialized){
         for (int i = 0; i < 3; i++){
@@ -1312,7 +1312,7 @@ int main(int argc, char** argv)
                                         kf_output.x_.bg = Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
                                         kf_output.x_.omg = Eigen::Vector3d::Zero(); // R_ecef_enu * state.vel_end;
                                         kf_output.x_.gravity = p_gnss->R_ecef_enu * kf_output.x_.gravity; // * R_enu_local_ 
-                                        kf_output.x_.acc = kf_output.x_.rot.normalized().toRotationMatrix().transpose() * (-kf_output.x_.gravity); // R_ecef_enu * state.vel_end;
+                                        kf_output.x_.acc = kf_output.x_.rot.conjugate() * (-kf_output.x_.gravity); // R_ecef_enu * state.vel_end;
                                         
                                         kf_output.P_ = MD(24,24)::Identity() * INIT_COV;
                                     }
@@ -1940,7 +1940,7 @@ int main(int argc, char** argv)
                         if (!GNSS_ENABLE)
                         {
                             Eigen::Matrix3d R_enu_local_;
-                            Eigen::Vector3d pos_r = kf_output.x_.rot.normalized().toRotationMatrix() * p_gnss->Tex_imu_r + kf_output.x_.pos;
+                            Eigen::Vector3d pos_r = kf_output.x_.rot * p_gnss->Tex_imu_r + kf_output.x_.pos;
                             Eigen::Vector3d anc;
                             anc << offline_init_vec[0], offline_init_vec[1], offline_init_vec[2];
                             R_enu_local_ = ecef2rotation(anc) * Eigen::AngleAxisd(offline_init_vec[3], Eigen::Vector3d::UnitZ()); 
@@ -1957,7 +1957,7 @@ int main(int argc, char** argv)
                         if (!GNSS_ENABLE)
                         {
                             Eigen::Matrix3d R_enu_local_;
-                            Eigen::Vector3d pos_r = kf_input.x_.rot.normalized().toRotationMatrix() * p_gnss->Tex_imu_r + kf_input.x_.pos;
+                            Eigen::Vector3d pos_r = kf_input.x_.rot * p_gnss->Tex_imu_r + kf_input.x_.pos;
                             Eigen::Vector3d anc;
                             anc << offline_init_vec[0], offline_init_vec[1], offline_init_vec[2];
                             R_enu_local_ = ecef2rotation(anc) * Eigen::AngleAxisd(offline_init_vec[3], Eigen::Vector3d::UnitZ()); 

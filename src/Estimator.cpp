@@ -374,11 +374,11 @@ void pointBodyToWorld(PointType const * const pi, PointType * const po)
 	{
 		if (!use_imu_as_input)
 		{
-			p_global = kf_output.x_.rot.normalized().toRotationMatrix() * (Lidar_R_wrt_IMU * p_body + Lidar_T_wrt_IMU) + kf_output.x_.pos;
+			p_global = kf_output.x_.rot * (Lidar_R_wrt_IMU * p_body + Lidar_T_wrt_IMU) + kf_output.x_.pos;
 		}
 		else
 		{
-			p_global = kf_input.x_.rot.normalized().toRotationMatrix() * (Lidar_R_wrt_IMU * p_body + Lidar_T_wrt_IMU) + kf_input.x_.pos;
+			p_global = kf_input.x_.rot * (Lidar_R_wrt_IMU * p_body + Lidar_T_wrt_IMU) + kf_input.x_.pos;
 		}
 	}
 
@@ -476,7 +476,7 @@ void LI_Init_update()
 
 				/*** calculate the Measurement Jacobian matrix H ***/
 			
-				V3D G(point_crossmat * p_imu->state_LI_Init.rot.normalized().toRotationMatrix().transpose() * norm_vec);
+				V3D G(point_crossmat * p_imu->state_LI_Init.rot.conjugate() * norm_vec);
 				Hsub.row(m_) << VEC_FROM_ARRAY(G), norm_p.x, norm_p.y, norm_p.z; //, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0;                    
 				Hsub_T_R_inv.col(m_) = Hsub.row(m_).transpose() * 100;
 				/*** Measurement: distance to the closest surface/corner ***/
