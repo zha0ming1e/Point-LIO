@@ -325,7 +325,7 @@ void set_gnss_offline_init(bool nolidar_)
             R_enu_local_ = Eigen::AngleAxisd(offline_init_vec[3], Eigen::Vector3d::UnitZ());
             state_in.rot = R_ecef_enu * R_enu_local_;
             state_in.rot.normalize();
-            state_in.pos -= state_in.rot * p_gnss->Tex_imu_r;
+            state_in.pos -= state_in.rot.normalized() * p_gnss->Tex_imu_r;
             state_in.gravity = R_ecef_enu * kf_input.x_.gravity; // * R_enu_local_ 
             kf_input.change_x(state_in);
         
@@ -356,7 +356,7 @@ void set_gnss_offline_init(bool nolidar_)
             R_enu_local_ = Eigen::AngleAxisd(offline_init_vec[3], Eigen::Vector3d::UnitZ());
             state_out.rot = R_ecef_enu * R_enu_local_;
             state_out.rot.normalize();
-            state_out.pos -= state_out.rot * p_gnss->Tex_imu_r;
+            state_out.pos -= state_out.rot.normalized() * p_gnss->Tex_imu_r;
             state_out.gravity = R_ecef_enu * kf_output.x_.gravity; // * R_enu_local_ 
             kf_output.change_x(state_out);
         
@@ -396,14 +396,14 @@ void cout_state_to_file()
         Eigen::Vector3d pos_enu;
         if (!nolidar)
         {
-            Eigen::Vector3d pos_r = p_gnss->state_.rot * p_gnss->Tex_imu_r + p_gnss->state_.pos;
+            Eigen::Vector3d pos_r = p_gnss->state_.rot.normalized() * p_gnss->Tex_imu_r + p_gnss->state_.pos;
             Eigen::Matrix3d enu_rot = p_gnss->p_assign->isamCurrentEstimate.at<gtsam::Rot3>(P(0)).matrix();
             Eigen::Vector3d anc_cur = p_gnss->p_assign->isamCurrentEstimate.at<gtsam::Vector3>(E(0));
             pos_enu = p_gnss->local2enu(enu_rot, anc_cur, pos_r);
         }
         else
         {
-            Eigen::Vector3d pos_r = kf_input.x_.rot * p_gnss->Tex_imu_r + kf_input.x_.pos;
+            Eigen::Vector3d pos_r = kf_input.x_.rot.normalized() * p_gnss->Tex_imu_r + kf_input.x_.pos;
             pos_enu = p_gnss->local2enu(Eigen::Matrix3d::Zero(), Eigen::Vector3d::Zero(), pos_r);
         }
         if (!p_gnss->gnss_online_init)
@@ -442,14 +442,14 @@ void cout_state_to_file()
         Eigen::Vector3d pos_enu;
         if (!nolidar)
         {
-            Eigen::Vector3d pos_r = p_gnss->state_const_.rot * p_gnss->Tex_imu_r + p_gnss->state_const_.pos; // maybe improper
+            Eigen::Vector3d pos_r = p_gnss->state_const_.rot.normalized() * p_gnss->Tex_imu_r + p_gnss->state_const_.pos; // maybe improper
             Eigen::Matrix3d enu_rot = p_gnss->p_assign->isamCurrentEstimate.at<gtsam::Rot3>(P(0)).matrix();
             Eigen::Vector3d anc_cur = p_gnss->p_assign->isamCurrentEstimate.at<gtsam::Vector3>(E(0));
             pos_enu = p_gnss->local2enu(enu_rot, anc_cur, pos_r);
         }
         else
         {
-            Eigen::Vector3d pos_r = kf_output.x_.rot * p_gnss->Tex_imu_r + kf_output.x_.pos;
+            Eigen::Vector3d pos_r = kf_output.x_.rot.normalized() * p_gnss->Tex_imu_r + kf_output.x_.pos;
             pos_enu = p_gnss->local2enu(Eigen::Matrix3d::Zero(), Eigen::Vector3d::Zero(), pos_r);
         }
         if (!p_gnss->gnss_online_init)

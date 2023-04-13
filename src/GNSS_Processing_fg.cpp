@@ -139,7 +139,7 @@ void GNSSProcess::processGNSS(const std::vector<ObsPtr> &gnss_meas, state_input 
 
   if (gnss_ready)
   {
-    Eigen::Vector3d pos_gnss = state.pos + state.rot * Tex_imu_r;
+    Eigen::Vector3d pos_gnss = state.pos + state.rot.normalized() * Tex_imu_r;
     updateGNSSStatistics(pos_gnss);
   }
   p_assign->processGNSSBase(gnss_meas, valid_meas, valid_ephems, gnss_ready, ecef_pos);
@@ -149,7 +149,7 @@ void GNSSProcess::processGNSS(const std::vector<ObsPtr> &gnss_meas, state_input 
     if (valid_meas.empty() || valid_meas.size() < 5) return; // right or not?
     {
       rot_window[frame_count] = state.rot.normalized().toRotationMatrix();
-      pos_window[frame_count] = state.pos + state.rot * Tex_imu_r;
+      pos_window[frame_count] = state.pos + state.rot.normalized() * Tex_imu_r;
       Eigen::Matrix3d omg_skew;
       omg_skew << SKEW_SYM_MATRX(omg);
       vel_window[frame_count] = state.vel + state.rot.normalized().toRotationMatrix() * omg_skew * Tex_imu_r;
@@ -191,7 +191,7 @@ void GNSSProcess::processGNSS(const std::vector<ObsPtr> &gnss_meas, state_output
 
   if (gnss_ready)
   {
-    Eigen::Vector3d pos_gnss = state.pos + state.rot * Tex_imu_r;
+    Eigen::Vector3d pos_gnss = state.pos + state.rot.normalized() * Tex_imu_r;
     updateGNSSStatistics(pos_gnss);
   }
   p_assign->processGNSSBase(gnss_meas, valid_meas, valid_ephems, gnss_ready, ecef_pos);
@@ -201,7 +201,7 @@ void GNSSProcess::processGNSS(const std::vector<ObsPtr> &gnss_meas, state_output
     if (valid_meas.empty() || valid_meas.size() < 5) return; // right or not?
     {
       rot_window[frame_count] = state.rot.normalized().toRotationMatrix();
-      pos_window[frame_count] = state.pos + state.rot * Tex_imu_r;
+      pos_window[frame_count] = state.pos + state.rot.normalized() * Tex_imu_r;
       Eigen::Matrix3d omg_skew;
       omg_skew << SKEW_SYM_MATRX(state.omg);
       vel_window[frame_count] = state.vel + state.rot.normalized().toRotationMatrix() * omg_skew * Tex_imu_r;
@@ -1138,7 +1138,7 @@ void GNSSProcess::processIMU(double dt, const Vector3d &linear_acceleration, con
   Eigen::Vector3d dr = angular_velocity * dt;
   state_.rot.boxplus(dr);
 
-  Eigen::Vector3d acc_imu = state_.rot * linear_acceleration + state_.gravity;
+  Eigen::Vector3d acc_imu = state_.rot.normalized() * linear_acceleration + state_.gravity;
 
   state_.pos += state_.vel * dt + 0.5 * acc_imu * dt * dt;
 
@@ -1150,7 +1150,7 @@ void GNSSProcess::processIMUOutput(double dt, const Vector3d &linear_acceleratio
   Eigen::Vector3d dr = angular_velocity * dt;
   state_const_.rot.boxplus(dr);
 
-  Eigen::Vector3d acc_imu = state_const_.rot * linear_acceleration + state_const_.gravity;
+  Eigen::Vector3d acc_imu = state_const_.rot.normalized() * linear_acceleration + state_const_.gravity;
 
   state_const_.pos += state_const_.vel * dt + 0.5 * acc_imu * dt * dt;
 

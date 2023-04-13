@@ -9,7 +9,7 @@ void ImuProcess::pointBodyToWorld_li_init(PointType const * const pi, PointType 
     V3D p_global;
 
     {
-        p_global = state_LI_Init.rot * p_body + state_LI_Init.pos;
+        p_global = state_LI_Init.rot.normalized() * p_body + state_LI_Init.pos;
     }
 
     po->x = p_global(0);
