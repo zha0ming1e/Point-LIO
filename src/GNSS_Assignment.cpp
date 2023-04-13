@@ -5,12 +5,13 @@ GNSSAssignment::GNSSAssignment() : gnss_track_num_threshold(20) {}
 void GNSSAssignment::initNoises( void ) // maybe usable!
 {
     gtsam::Vector priorrotNoiseVector3(3);
-    priorrotNoiseVector3 << prior_noise * 1, prior_noise * 1, prior_noise * 1;
+    priorrotNoiseVector3 << prior_noise, prior_noise, prior_noise;
+    // priorrotNoiseVector3 << prior_noise / 1000, prior_noise / 1000, prior_noise / 1000;
     priorrotNoise = gtsam::noiseModel::Diagonal::Variances(priorrotNoiseVector3);
 
     gtsam::Vector priorposNoiseVector12(12);
-    priorposNoiseVector12 << prior_noise, prior_noise, prior_noise, prior_noise, prior_noise, prior_noise,
-                            prior_noise, prior_noise, prior_noise, prior_noise, prior_noise, prior_noise;
+    priorposNoiseVector12 << prior_noise / 1000, prior_noise / 1000, prior_noise / 1000, prior_noise / 1000, prior_noise / 1000, prior_noise / 1000,
+                            prior_noise / 1000, prior_noise / 1000, prior_noise / 1000, prior_noise / 1000, prior_noise / 1000, prior_noise / 1000;
     priorposNoise = gtsam::noiseModel::Diagonal::Variances(priorposNoiseVector12);
 
     // gtsam::Vector priorvelNoiseVector3(3);
@@ -18,7 +19,8 @@ void GNSSAssignment::initNoises( void ) // maybe usable!
     // priorvelNoise = gtsam::noiseModel::Diagonal::Variances(priorvelNoiseVector3);
 
     gtsam::Vector priorNoiseVector6(6);
-    priorNoiseVector6 << prior_noise * 1, prior_noise * 1, prior_noise * 1, prior_noise * 1, prior_noise * 1, prior_noise * 1; 
+    // priorNoiseVector6 << prior_noise / 1000, prior_noise / 1000, prior_noise / 1000, prior_noise / 1000, prior_noise / 1000, prior_noise / 1000; 
+    priorNoiseVector6 << prior_noise, prior_noise, prior_noise, prior_noise, prior_noise, prior_noise; 
     //, prior_noise, prior_noise, prior_noise, prior_noise, prior_noise, prior_noise, prior_noise, prior_noise;
     priorNoise = gtsam::noiseModel::Diagonal::Variances(priorNoiseVector6);
 

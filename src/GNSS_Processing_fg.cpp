@@ -812,7 +812,7 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
   {
     invalid_lidar = nolidar_cur;
     size_t num_norm = norm_vec_holder.size();
-    if (num_norm > 0)
+    if (num_norm > 2)
     {
     Eigen::MatrixXd A(num_norm, 3);
     for (size_t i = 0; i < num_norm; i++)
@@ -824,6 +824,11 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
     Eigen::VectorXd singular_values = svd.singularValues().cwiseAbs();
     std::sort(singular_values.data(), singular_values.data() + singular_values.size(), std::greater<double>());
     if (singular_values[2] / singular_values[0] < 1e-3) invalid_lidar = true;
+    }
+    else
+    {
+      invalid_lidar = true;
+      std::vector<Eigen::Vector3d>().swap(norm_vec_holder);
     }
   }
   if ((delta_t > 15 * gnss_sample_period && nolidar) || (delta_t > 15 * gnss_sample_period && invalid_lidar && !nolidar))

@@ -148,19 +148,20 @@ class GnssCpFactorPos : public gtsam::NoiseModelFactor4<gtsam::Vector3, gtsam::R
                         // d_pos2 << 0.0, 0.0, pos_v2[1], 
                         //             0.0, 0.0, -pos_v2[0], 
                         //             0.0, 0.0, 0.0;
-                    }
-                    else
-                    {
-                        d_pos1 << 0.0, -pos_v1[2], 0.0, 
-                                    pos_v1[2], 0.0, 0.0, 
-                                    -pos_v1[1], pos_v1[0], 0.0;
-                        d_pos2 << 0.0, -pos_v2[2], 0.0, 
-                                    pos_v2[2], 0.0, 0.0, 
-                                    -pos_v2[1], pos_v2[0], 0.0;
-                    }
+                    // }
+                    // else
+                    // {
+                    //     d_pos1 << 0.0, -pos_v1[2], 0.0, 
+                    //                 pos_v1[2], 0.0, 0.0, 
+                    //                 -pos_v1[1], pos_v1[0], 0.0;
+                    //     d_pos2 << 0.0, -pos_v2[2], 0.0, 
+                    //                 pos_v2[2], 0.0, 0.0, 
+                    //                 -pos_v2[1], pos_v2[0], 0.0;
+                    // }
                     (*H2).block<1,3>(0,0) = (rcv2sat_unit_bj - rcv2sat_unit_pj).transpose() * R_ecef_local * d_pos2 * cp_weight
                                 -(rcv2sat_unit_bi - rcv2sat_unit_pi).transpose() * R_ecef_local * d_pos1 * cp_weight;
                     // printf("check hessian:%f, %f, %f\n", (*H2)(0, 0), (*H2)(0, 1), (*H2)(0, 2));
+                    }
                     }
                 }
 

@@ -227,20 +227,21 @@ class GnssPsrDoppFactor : public gtsam::NoiseModelFactor6<gtsam::Rot3, gtsam::Ve
                         // d_vel << 0.0, 0.0, local_vel[1], 
                         //             0.0, 0.0, -local_vel[0], 
                         //             0.0, 0.0, 0.0;
-                    }
-                    else
-                    {
-                        d_pos << 0.0, -pos_v[2], 0.0, 
-                                    pos_v[2], 0.0, 0.0, 
-                                    -pos_v[1], pos_v[0], 0.0;
-                        d_vel << 0.0, -local_vel[2], 0.0, 
-                                    local_vel[2], 0.0, 0.0, 
-                                    -local_vel[1], local_vel[0], 0.0;
-                    }
+                    // }
+                    // else
+                    // {
+                    //     d_pos << 0.0, -pos_v[2], 0.0, 
+                    //                 pos_v[2], 0.0, 0.0, 
+                    //                 -pos_v[1], pos_v[0], 0.0;
+                    //     d_vel << 0.0, -local_vel[2], 0.0, 
+                    //                 local_vel[2], 0.0, 0.0, 
+                    //                 -local_vel[1], local_vel[0], 0.0;
+                    // }
                     (*H6).block<1,3>(0,0) = rcv2sat_unit.transpose() * (R_ecef_local * d_pos) * pr_weight;
                     (*H6).block<1,3>(1,0) = rcv2sat_unit.transpose() * (R_ecef_local * d_vel) * dp_weight - (sv_vel-V_ecef).transpose() * unit2rcv_pos * 
                                     R_ecef_local * d_pos * dp_weight;
                     // printf("check hessian:%f, %f, %f\n", (*H6)(0, 0), (*H6)(0, 1), (*H6)(0, 2));
+                    }
                     }
                 }
                 return residual;
