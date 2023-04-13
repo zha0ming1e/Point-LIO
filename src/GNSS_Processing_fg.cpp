@@ -1023,8 +1023,8 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
     rcv_sys[sys_idx] = true;
     if (!nolidar)
     { 
-      // p_assign->gtSAMgraph.add(glio::GnssPsrDoppFactor(R(frame_num), A(frame_num), B(frame_num), C(frame_num), E(0), P(0), invalid_lidar, values, sys_idx, hat_omg_T, p_assign->robustpsrdoppNoise));
-      p_assign->gtSAMgraph.add(glio::GnssPsrDoppFactorPos(A(frame_num), B(frame_num), C(frame_num), E(0), P(0), invalid_lidar, values, sys_idx, rot_pos, hat_omg_T, p_assign->robustpsrdoppNoise));
+      p_assign->gtSAMgraph.add(glio::GnssPsrDoppFactor(R(frame_num), A(frame_num), B(frame_num), C(frame_num), E(0), P(0), invalid_lidar, values, sys_idx, hat_omg_T, p_assign->robustpsrdoppNoise));
+      // p_assign->gtSAMgraph.add(glio::GnssPsrDoppFactorPos(A(frame_num), B(frame_num), C(frame_num), E(0), P(0), invalid_lidar, values, sys_idx, rot_pos, hat_omg_T, p_assign->robustpsrdoppNoise));
     }
     else
     {    
@@ -1069,7 +1069,7 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
       id_accumulate += 1;
       Eigen::Vector3d anc_cur = p_assign->isamCurrentEstimate.at<gtsam::Vector3>(E(0));
       Eigen::Matrix3d R_enu_local_ = p_assign->isamCurrentEstimate.at<gtsam::Rot3>(P(0)).matrix();
-      gtsam::PriorFactor<gtsam::Rot3> init_rot_ext(P(0), gtsam::Rot3(gtsam::Rot3(R_enu_local_)), p_assign->margrotNoise);
+      gtsam::PriorFactor<gtsam::Rot3> init_rot_ext(P(0), gtsam::Rot3(gtsam::Rot3(R_enu_local_)), p_assign->margrotNoise); // maybe not need
       gtsam::PriorFactor<gtsam::Vector3> init_pos_ext(E(0), gtsam::Vector3(anc_cur[0], anc_cur[1], anc_cur[2]), p_assign->margNoise);
       p_assign->gtSAMgraph.add(init_rot_ext);
       p_assign->gtSAMgraph.add(init_pos_ext);
@@ -1111,9 +1111,9 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
     values[18] = meas_cp_best - meas_cp[j] - meas_sats[j]; values[19] = cp_weight; 
     if (!nolidar)
     {
-      // p_assign->gtSAMgraph.add(glio::GnssCpFactor(E(0), P(0), R(meas_index_sats[j]), A(meas_index_sats[j]), R(frame_num), A(frame_num), invalid_lidar, values, p_assign->robustcpNoise));
-      Eigen::Matrix3d rot_before = p_assign->isamCurrentEstimate.at<gtsam::Rot3>(R(meas_index_sats[j])).matrix();
-      p_assign->gtSAMgraph.add(glio::GnssCpFactorPos(E(0), P(0), A(meas_index_sats[j]), A(frame_num), invalid_lidar, values, rot_before, rot_pos, p_assign->robustcpNoise));
+      p_assign->gtSAMgraph.add(glio::GnssCpFactor(E(0), P(0), R(meas_index_sats[j]), A(meas_index_sats[j]), R(frame_num), A(frame_num), invalid_lidar, values, p_assign->robustcpNoise));
+      // Eigen::Matrix3d rot_before = p_assign->isamCurrentEstimate.at<gtsam::Rot3>(R(meas_index_sats[j])).matrix();
+      // p_assign->gtSAMgraph.add(glio::GnssCpFactorPos(E(0), P(0), A(meas_index_sats[j]), A(frame_num), invalid_lidar, values, rot_before, rot_pos, p_assign->robustcpNoise));
     }
     else
     {

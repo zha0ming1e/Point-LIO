@@ -10,8 +10,10 @@ void GNSSAssignment::initNoises( void ) // maybe usable!
     priorrotNoise = gtsam::noiseModel::Diagonal::Variances(priorrotNoiseVector3);
 
     gtsam::Vector priorposNoiseVector12(12);
-    priorposNoiseVector12 << prior_noise / 1000, prior_noise / 1000, prior_noise / 1000, prior_noise / 1000, prior_noise / 1000, prior_noise / 1000,
-                            prior_noise / 1000, prior_noise / 1000, prior_noise / 1000, prior_noise / 1000, prior_noise / 1000, prior_noise / 1000;
+    // priorposNoiseVector12 << prior_noise / 1000, prior_noise / 1000, prior_noise / 1000, prior_noise / 1000, prior_noise / 1000, prior_noise / 1000,
+    //                         prior_noise / 1000, prior_noise / 1000, prior_noise / 1000, prior_noise / 1000, prior_noise / 1000, prior_noise / 1000;
+    priorposNoiseVector12 << prior_noise, prior_noise, prior_noise, prior_noise, prior_noise, prior_noise,
+                            prior_noise, prior_noise, prior_noise, prior_noise, prior_noise, prior_noise;
     priorposNoise = gtsam::noiseModel::Diagonal::Variances(priorposNoiseVector12);
 
     // gtsam::Vector priorvelNoiseVector3(3);
