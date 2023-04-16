@@ -67,9 +67,9 @@ struct dyn_share_modified
 	Eigen::Matrix<T, Eigen::Dynamic, 1> z;
 	Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> h_x;
 	Eigen::Matrix<T, 6, 1> z_IMU;
-	Eigen::Matrix<T, 9, 1> z_GNSS;
+	Eigen::Matrix<T, 3, 1> z_GNSS;
 	Eigen::Matrix<T, 6, 1> R_IMU;
-	Eigen::Matrix<T, 9, 9> h_GNSS;
+	Eigen::Matrix<T, 3, 3> h_GNSS;
 	bool satu_check[6];
 };
 
@@ -344,17 +344,17 @@ public:
 
 			// Matrix<scalar_type, 9, 1> z = dyn_share.z_GNSS;
 		
-			Matrix<double, 9, 9> Hsub_T = dyn_share.h_GNSS.transpose();
+			Matrix<double, 3, 3> Hsub_T = dyn_share.h_GNSS.transpose();
 			Matrix<double, n, 1> solution;
-			Matrix<double, n, 9> PHT;
-			Matrix<double, n, 9> K;
-			Matrix<double, 9, 9> HPHT;
-			Matrix<double, n, 9> KH;
+			Matrix<double, n, 3> PHT;
+			Matrix<double, n, 3> K;
+			Matrix<double, 3, 3> HPHT;
+			Matrix<double, n, 3> KH;
 			
 			{
-				PHT = P_.template block<n, 9>(0, 0) * Hsub_T;
-				HPHT = dyn_share.h_GNSS * PHT.template block<9, 9>(0, 0);
-				for (int m_ = 0; m_ < 9; m_++)
+				PHT = P_.template block<n, 3>(0, 0) * Hsub_T;
+				HPHT = dyn_share.h_GNSS * PHT.template block<3, 3>(0, 0);
+				for (int m_ = 0; m_ < 3; m_++)
 				{
 					HPHT(m_,m_) += dyn_share.M_Noise;
 				}
@@ -365,7 +365,7 @@ public:
                                     
             Matrix<scalar_type, n, 1> dx_ = K * dyn_share.z_GNSS;
 
-            P_ -= KH * P_.template block<9, n>(0, 0);
+            P_ -= KH * P_.template block<3, n>(0, 0);
 			x_.boxplus(dx_);
 		}
 		

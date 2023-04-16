@@ -122,7 +122,7 @@ class GnssCpFactor : public gtsam::NoiseModelFactor6<gtsam::Vector3, gtsam::Rot3
                     // hatP2 << 0.0, -vecP2(2), vecP2(1),
                     //     vecP2(2), 0.0, -vecP2(0),
                     //     -vecP2(1), vecP2(0), 0.0;
-                    if (!invalid_lidar)
+                    // if (!invalid_lidar)
                     {
                     (*H1).block<1,3>(0,0) = (-rcv2sat_unit_bj + rcv2sat_unit_pj).transpose() * cp_weight + (rcv2sat_unit_bi - rcv2sat_unit_pi).transpose() * cp_weight;
                     // (*H1).block<1,3>(0,0) = (-rcv2sat_unit_bj + rcv2sat_unit_pj).transpose() * (Eye3d + R_ecef_enu_cur * hatP2 * R1TE3 * vecLon.transpose() - R_ecef_enu_cur * hatP2 * E1 * vecLat.transpose()) * cp_weight
@@ -133,7 +133,7 @@ class GnssCpFactor : public gtsam::NoiseModelFactor6<gtsam::Vector3, gtsam::Rot3
                 if (H2)
                 {
                     (*H2) = gtsam::Matrix::Zero(1,3);
-                    if (!invalid_lidar)
+                    // if (!invalid_lidar)
                     {
                     Eigen::Matrix3d d_pos1, d_pos2;
                     Eigen::Vector3d pos_v1 = local_pos1 - anc_local;

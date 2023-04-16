@@ -48,7 +48,7 @@ void GNSSProcess::Reset()
 
   gtsam::ISAM2Params parameters;
   parameters.relinearizeThreshold = 0.1;
-  parameters.relinearizeSkip = 1; // may matter? improtant!
+  parameters.relinearizeSkip = 5; // may matter? improtant!
   p_assign->isam = gtsam::ISAM2(parameters);
 }
 
@@ -812,7 +812,7 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
   {
     invalid_lidar = nolidar_cur;
     size_t num_norm = norm_vec_holder.size();
-    if (num_norm > 2)
+    if (num_norm > 10) // 2)
     {
     Eigen::MatrixXd A(num_norm, 3);
     for (size_t i = 0; i < num_norm; i++)
@@ -1069,7 +1069,13 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
       id_accumulate += 1;
       Eigen::Vector3d anc_cur = p_assign->isamCurrentEstimate.at<gtsam::Vector3>(E(0));
       Eigen::Matrix3d R_enu_local_ = p_assign->isamCurrentEstimate.at<gtsam::Rot3>(P(0)).matrix();
-      gtsam::PriorFactor<gtsam::Rot3> init_rot_ext(P(0), gtsam::Rot3(gtsam::Rot3(R_enu_local_)), p_assign->margrotNoise); // maybe not need
+      // gtsam::noiseModel::Gaussian::shared_ptr updatedERNoise = gtsam::noiseModel::Gaussian::Covariance(p_assign->isam.marginalCovariance(P(0)) * 1); // important
+      // gtsam::noiseModel::Gaussian::shared_ptr updatedEPNoise = gtsam::noiseModel::Gaussian::Covariance(p_assign->isam.marginalCovariance(E(0)) * 1); // important
+      // gtsam::PriorFactor<gtsam::Rot3> init_ER(P(0),p_assign->isamCurrentEstimate.at<gtsam::Rot3>(P(0)), updatedERNoise); // 
+      // gtsam::PriorFactor<gtsam::Vector3> init_EP(E(0),p_assign->isamCurrentEstimate.at<gtsam::Vector3>(E(0)), updatedEPNoise); // 
+      // p_assign->gtSAMgraph.add(init_ER);
+      // p_assign->gtSAMgraph.add(init_EP);
+      gtsam::PriorFactor<gtsam::Rot3> init_rot_ext(P(0), gtsam::Rot3(gtsam::Rot3(R_enu_local_)), p_assign->margrotNoise); // maybe not need, no, need and should be small.
       gtsam::PriorFactor<gtsam::Vector3> init_pos_ext(E(0), gtsam::Vector3(anc_cur[0], anc_cur[1], anc_cur[2]), p_assign->margNoise);
       p_assign->gtSAMgraph.add(init_rot_ext);
       p_assign->gtSAMgraph.add(init_pos_ext);

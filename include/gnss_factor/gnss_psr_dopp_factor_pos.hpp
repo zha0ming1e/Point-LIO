@@ -186,7 +186,7 @@ class GnssPsrDoppFactorPos : public gtsam::NoiseModelFactor5<gtsam::Vector6, gts
                     //     vecV(2), 0.0, -vecV(0),
                     //     -vecV(1), vecV(0), 0.0;
                     (*H4) = gtsam::Matrix::Zero(2,3);
-                    if (!invalid_lidar)
+                    // if (!invalid_lidar)
                     {
                     (*H4).block<1,3>(0,0) = -rcv2sat_unit.transpose() * pr_weight;
                     // (*H5).block<1,3>(0,0) = -rcv2sat_unit.transpose() * (Eye3d + R_ecef_enu_cur * hatP * R1TE3 * vecLon.transpose() - R_ecef_enu_cur * hatP * E1 * vecLat.transpose()) * pr_weight;
@@ -199,7 +199,7 @@ class GnssPsrDoppFactorPos : public gtsam::NoiseModelFactor5<gtsam::Vector6, gts
                 if (H5)
                 {
                     (*H5) = gtsam::Matrix::Zero(2,3);
-                    if (!invalid_lidar)
+                    // if (!invalid_lidar)
                     {
                     Eigen::Vector3d pos_v = local_pos - anc_local;
                     Eigen::Matrix3d d_pos, d_vel;

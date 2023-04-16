@@ -76,7 +76,7 @@ gnss:
     outlier_thres: 0.1
     window_size: 1 # <= 10
     prior_noise: 1000 #
-    marg_noise: 100 #
+    marg_noise: 100 
     dt_noise: 0.1
     acc_noise: 0.1 #
     omg_noise: 0.1 #
