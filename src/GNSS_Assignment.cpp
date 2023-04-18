@@ -52,21 +52,21 @@ void GNSSAssignment::initNoises( void ) // maybe usable!
     // priorvelNoise = gtsam::noiseModel::Diagonal::Variances(priorvelNoiseVector3);
 
     gtsam::Vector margNoiseVector3(3);
-    margNoiseVector3 << prior_noise * 1, prior_noise * 1, prior_noise * 1; //, marg_noise, marg_noise, marg_noise, marg_noise, marg_noise, marg_noise, 
+    margNoiseVector3 << prior_noise, prior_noise, prior_noise; //, marg_noise, marg_noise, marg_noise, marg_noise, marg_noise, marg_noise, 
                         // marg_noise, marg_noise;
     margNoise = gtsam::noiseModel::Diagonal::Variances(margNoiseVector3);
 
-    gtsam::Vector margdtNoiseVector4(4);
-    margdtNoiseVector4 << marg_noise, marg_noise, marg_noise, marg_noise;
-    margdtNoise = gtsam::noiseModel::Diagonal::Variances(margdtNoiseVector4);
+    gtsam::Vector margdtNoiseVector3(3);
+    margdtNoiseVector3 << prior_noise / 100, prior_noise / 100, prior_noise / 100; //, marg_noise;
+    margdtNoise = gtsam::noiseModel::Diagonal::Variances(margdtNoiseVector3);
 
     // gtsam::Vector margExtNoiseVector4(4);
     // margExtNoiseVector4 << 1e-6, 1e-6, 1e-6, 1e-6;
     // margExtNoise = gtsam::noiseModel::Diagonal::Variances(margExtNoiseVector4);
 
-    gtsam::Vector margddtNoiseVector1(1);
-    margddtNoiseVector1 << prior_noise;
-    margddtNoise = gtsam::noiseModel::Diagonal::Variances(margddtNoiseVector1);
+    gtsam::Vector margddtNoiseVector3(3);
+    margddtNoiseVector3 << prior_noise / 100, prior_noise / 100, prior_noise / 100; //prior_noise;
+    margddtNoise = gtsam::noiseModel::Diagonal::Variances(margddtNoiseVector3);
 
     gtsam::Vector dtNoiseVector4(4);
     dtNoiseVector4 << dt_noise, dt_noise, dt_noise, dt_noise;
