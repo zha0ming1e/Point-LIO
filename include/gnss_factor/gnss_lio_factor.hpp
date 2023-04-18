@@ -47,8 +47,8 @@ class GnssLioFactor : public gtsam::NoiseModelFactor4<gtsam::Rot3, gtsam::Vector
             if (H1) 
             {
                 (*H1) = gtsam::Matrix::Zero(9,3);
-                (*H1).block<3,3>(0,0) = -Jacob_right_inv<double>(res_r) * d.transpose();  //- d.transpose(); 
-                (*H1).block<3,3>(3,0) = skew_sym_mat(delta_p); 
+                (*H1).block<3,3>(3,0) = -Jacob_right_inv<double>(res_r) * d.transpose();  //- d.transpose(); 
+                (*H1).block<3,3>(0,0) = skew_sym_mat(delta_p); 
                 (*H1).block<3,3>(6,0) = skew_sym_mat(delta_v); 
                 (*H1) = sqrt_info.block<9, 9>(0, 0) * (*H1);
             }
@@ -58,8 +58,8 @@ class GnssLioFactor : public gtsam::NoiseModelFactor4<gtsam::Rot3, gtsam::Vector
                 // (*H2).block<3,3>(3,0) = - sqrt_info * rot1.transpose(); // - gtsam::Matrix::Identity(3,3); 
                 // (*H2).block<3,3>(3,3) = - sqrt_info * rot1.transpose() * dt; // gtsam::Matrix::Identity(3,3);
                 // (*H2).block<3,3>(6,3) = - sqrt_info * rot1.transpose(); // - gtsam::Matrix::Identity(3,3);
-                (*H2).block<3,3>(3,0) = - rot1.transpose(); // - gtsam::Matrix::Identity(3,3); 
-                (*H2).block<3,3>(3,3) = - rot1.transpose() * dt; // gtsam::Matrix::Identity(3,3);
+                (*H2).block<3,3>(0,0) = - rot1.transpose(); // - gtsam::Matrix::Identity(3,3); 
+                (*H2).block<3,3>(0,3) = - rot1.transpose() * dt; // gtsam::Matrix::Identity(3,3);
                 (*H2).block<3,3>(6,3) = - rot1.transpose(); // - gtsam::Matrix::Identity(3,3);
                 // (*H2).block<3,3>(9,6) = - 0.01 * gtsam::Matrix::Identity(3,3); // dt
                 // (*H2).block<3,3>(12,9) = - 0.01 * gtsam::Matrix::Identity(3,3); // dt
@@ -68,7 +68,7 @@ class GnssLioFactor : public gtsam::NoiseModelFactor4<gtsam::Rot3, gtsam::Vector
             if (H3) 
             {
                 (*H3) = gtsam::Matrix::Zero(9,3);
-                (*H3).block<3,3>(0,0) = Jacob_right_inv<double>(res_r); // gtsam::Matrix::Identity(3,3); 
+                (*H3).block<3,3>(3,0) = Jacob_right_inv<double>(res_r); // gtsam::Matrix::Identity(3,3); 
                 (*H3) = sqrt_info.block<9, 9>(0, 0) * (*H3);
             }
             if (H4) 
@@ -76,7 +76,7 @@ class GnssLioFactor : public gtsam::NoiseModelFactor4<gtsam::Rot3, gtsam::Vector
                 (*H4) = gtsam::Matrix::Zero(9,6);
                 // (*H4).block<3,3>(3,0) = sqrt_info * rot1.transpose(); // gtsam::Matrix::Identity(3,3); 
                 // (*H4).block<3,3>(6,3) = sqrt_info * rot1.transpose(); // gtsam::Matrix::Identity(3,3);
-                (*H4).block<3,3>(3,0) = rot1.transpose(); // gtsam::Matrix::Identity(3,3); 
+                (*H4).block<3,3>(0,0) = rot1.transpose(); // gtsam::Matrix::Identity(3,3); 
                 (*H4).block<3,3>(6,3) = rot1.transpose(); // gtsam::Matrix::Identity(3,3);
                 // (*H4).block<3,3>(9,6) = 0.1 * gtsam::Matrix::Identity(3,3); // dt
                 // (*H4).block<3,3>(12,9) = 0.1 * gtsam::Matrix::Identity(3,3); // dt
@@ -86,8 +86,8 @@ class GnssLioFactor : public gtsam::NoiseModelFactor4<gtsam::Rot3, gtsam::Vector
             }
             gtsam::Vector residual(9);
             // Eigen::Matrix3d res_R = rel_rot.transpose() * d.matrix();
-            residual.segment<3>(0) = res_r; // gtsam::Rot3::Logmap(gtsam::Rot3(res_R));
-            residual.segment<3>(3) = delta_p - rel_pos; // pos2- pos1 - rel_pos;
+            residual.segment<3>(3) = res_r; // gtsam::Rot3::Logmap(gtsam::Rot3(res_R));
+            residual.segment<3>(0) = delta_p - rel_pos; // pos2- pos1 - rel_pos;
             residual.segment<3>(6) = delta_v - rel_vel; // vel2 - vel1 - rel_vel;
             // residual.segment<6>(9) = vel2.segment<6>(3) - vel1.segment<6>(3);
             // residual = sqrt_info * residual;

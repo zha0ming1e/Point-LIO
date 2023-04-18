@@ -1081,6 +1081,8 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
       // p_assign->gtSAMgraph.add(init_pos_ext);
       factor_id_cur.push_back(id_accumulate);
       factor_id_cur.push_back(id_accumulate+1);
+      // p_assign->factor_id_frame[frame_num-1-frame_delete].push_back(id_accumulate);
+      // p_assign->factor_id_frame[frame_num-1-frame_delete].push_back(id_accumulate+1);
       id_accumulate += 2;
     }
     else
