@@ -823,7 +823,7 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
     BDCSVD<Eigen::MatrixXd> svd(A, ComputeThinU | ComputeThinV);
     Eigen::VectorXd singular_values = svd.singularValues().cwiseAbs();
     std::sort(singular_values.data(), singular_values.data() + singular_values.size(), std::greater<double>());
-    if (singular_values[2] / singular_values[0] < 1e-4) invalid_lidar = true;
+    if (singular_values[1] / singular_values[0] < 0.1) invalid_lidar = true;
     }
     else
     {
@@ -1063,27 +1063,30 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
     // gtsam::noiseModel::Gaussian::shared_ptr LioNoise = gtsam::noiseModel::Gaussian::Covariance(state_cov); 
     if (invalid_lidar)
     {
-      p_assign->gtSAMgraph.add(glio::GnssLioFactor(R(frame_num-1), A(frame_num-1), R(frame_num), A(frame_num), 1.0, rel_rot, rel_pos, rel_vel,
-                      state_gravity, delta_t, pre_integration->covariance, p_assign->odomNoise)); // odomNoiseIMU)); // LioNoise)); // 
-      p_assign->factor_id_frame[frame_num-1-frame_delete].push_back(id_accumulate);
+      p_assign->gtSAMgraph.add(glio::GnssLioHardFactor(R(frame_num), A(frame_num), ba, bg, rot, sqrt_lidar, p_assign->odomNoise)); //LioNoise)); // odomNoiseIMU));
+      factor_id_cur.push_back(id_accumulate);
       id_accumulate += 1;
-      Eigen::Vector3d anc_cur = p_assign->isamCurrentEstimate.at<gtsam::Vector3>(E(0));
-      Eigen::Matrix3d R_enu_local_ = p_assign->isamCurrentEstimate.at<gtsam::Rot3>(P(0)).matrix();
-      gtsam::noiseModel::Gaussian::shared_ptr updatedERNoise = gtsam::noiseModel::Gaussian::Covariance(p_assign->isam.marginalCovariance(P(0)) * 1); // important
-      gtsam::noiseModel::Gaussian::shared_ptr updatedEPNoise = gtsam::noiseModel::Gaussian::Covariance(p_assign->isam.marginalCovariance(E(0)) * 1); // important
-      gtsam::PriorFactor<gtsam::Rot3> init_ER(P(0),p_assign->isamCurrentEstimate.at<gtsam::Rot3>(P(0)), updatedERNoise); // 
-      gtsam::PriorFactor<gtsam::Vector3> init_EP(E(0),p_assign->isamCurrentEstimate.at<gtsam::Vector3>(E(0)), updatedEPNoise); // 
-      p_assign->gtSAMgraph.add(init_ER);
-      p_assign->gtSAMgraph.add(init_EP);
+      // p_assign->gtSAMgraph.add(glio::GnssLioFactor(R(frame_num-1), A(frame_num-1), R(frame_num), A(frame_num), 1.0, rel_rot, rel_pos, rel_vel,
+                      // state_gravity, delta_t, pre_integration->covariance, p_assign->odomNoise)); // odomNoiseIMU)); // LioNoise)); // 
+      // p_assign->factor_id_frame[frame_num-1-frame_delete].push_back(id_accumulate);
+      // id_accumulate += 1;
+      // Eigen::Vector3d anc_cur = p_assign->isamCurrentEstimate.at<gtsam::Vector3>(E(0));
+      // Eigen::Matrix3d R_enu_local_ = p_assign->isamCurrentEstimate.at<gtsam::Rot3>(P(0)).matrix();
+      // gtsam::noiseModel::Gaussian::shared_ptr updatedERNoise = gtsam::noiseModel::Gaussian::Covariance(p_assign->isam.marginalCovariance(P(0)) * 10); // important
+      // gtsam::noiseModel::Gaussian::shared_ptr updatedEPNoise = gtsam::noiseModel::Gaussian::Covariance(p_assign->isam.marginalCovariance(E(0)) * 10); // important
+      // gtsam::PriorFactor<gtsam::Rot3> init_ER(P(0),p_assign->isamCurrentEstimate.at<gtsam::Rot3>(P(0)), updatedERNoise); // 
+      // gtsam::PriorFactor<gtsam::Vector3> init_EP(E(0),p_assign->isamCurrentEstimate.at<gtsam::Vector3>(E(0)), updatedEPNoise); // 
+      // p_assign->gtSAMgraph.add(init_ER);
+      // p_assign->gtSAMgraph.add(init_EP);
       // gtsam::PriorFactor<gtsam::Rot3> init_rot_ext(P(0), gtsam::Rot3(gtsam::Rot3(R_enu_local_)), p_assign->margdtNoise); // maybe not need, no, need and should be small.
       // gtsam::PriorFactor<gtsam::Vector3> init_pos_ext(E(0), gtsam::Vector3(anc_cur[0], anc_cur[1], anc_cur[2]), p_assign->margddtNoise);
       // p_assign->gtSAMgraph.add(init_rot_ext);
       // p_assign->gtSAMgraph.add(init_pos_ext);
-      factor_id_cur.push_back(id_accumulate);
-      factor_id_cur.push_back(id_accumulate+1);
+      // factor_id_cur.push_back(id_accumulate);
+      // factor_id_cur.push_back(id_accumulate+1);
       // p_assign->factor_id_frame[frame_num-1-frame_delete].push_back(id_accumulate);
       // p_assign->factor_id_frame[frame_num-1-frame_delete].push_back(id_accumulate+1);
-      id_accumulate += 2;
+      // id_accumulate += 2;
     }
     else
     {

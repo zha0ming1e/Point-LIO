@@ -387,15 +387,15 @@ void GNSSAssignment::delete_variables(bool nolidar, size_t frame_delete, int fra
         {
             // gtsam::noiseModel::Gaussian::shared_ptr updatedERNoise = gtsam::noiseModel::Gaussian::Covariance(isam.marginalCovariance(P(0)) * 1); // important
             // gtsam::noiseModel::Gaussian::shared_ptr updatedEPNoise = gtsam::noiseModel::Gaussian::Covariance(isam.marginalCovariance(E(0)) * 1); // important
-            // gtsam::PriorFactor<gtsam::Rot3> init_ER(P(0),isamCurrentEstimate.at<gtsam::Rot3>(P(0)), updatedERNoise); //  margrotNoise); //
-            // gtsam::PriorFactor<gtsam::Vector3> init_EP(E(0),isamCurrentEstimate.at<gtsam::Vector3>(E(0)), updatedEPNoise); // margrotNoise); // 
-            // gtSAMgraph.add(init_ER);
-            // gtSAMgraph.add(init_EP);
+            gtsam::PriorFactor<gtsam::Rot3> init_ER(P(0),isamCurrentEstimate.at<gtsam::Rot3>(P(0)), margrotNoise); // updatedERNoise); //  
+            gtsam::PriorFactor<gtsam::Vector3> init_EP(E(0),isamCurrentEstimate.at<gtsam::Vector3>(E(0)), margrotNoise); // updatedEPNoise); //
+            gtSAMgraph.add(init_ER);
+            gtSAMgraph.add(init_EP);
             // factor_id_frame[0].push_back(id_accumulate);
             // factor_id_frame[0].push_back(id_accumulate+1);
-            // factor_id_frame[frame_num - 1 - frame_delete].push_back(id_accumulate);
-            // factor_id_frame[frame_num - 1 - frame_delete].push_back(id_accumulate+1);
-            // id_accumulate += 2;
+            factor_id_frame[frame_num - 1 - frame_delete].push_back(id_accumulate);
+            factor_id_frame[frame_num - 1 - frame_delete].push_back(id_accumulate+1);
+            id_accumulate += 2;
             change_ext = frame_num;
         }
         size_t j = 0;
