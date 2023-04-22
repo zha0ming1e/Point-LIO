@@ -45,28 +45,28 @@ class GNSSProcess
   std::vector<Eigen::Vector3d> lla_holder;
   std::queue<std::vector<ObsPtr>> gnss_msg;
 
-  bool gnss_online_init; // no use
+  bool gnss_online_init = true; // no use
   bool invalid_lidar = false;
   // double dt[4];
   // double ddt; 
-  size_t id_accumulate; // 
+  size_t id_accumulate = 0; // 
   size_t frame_delete = 0; // 
 
   int frame_num = 0; // 
   double last_gnss_time = 0.0; //
   double gnss_sample_period = 0.1;
 
-  double diff_t_gnss_local;
-  double gnss_cp_std_threshold;
-  double gnss_cp_time_threshold;
+  double diff_t_gnss_local = 0.0;
+  double gnss_cp_std_threshold = 30;
+  double gnss_cp_time_threshold = 30;
   Eigen::Vector3d ecef_pos, first_xyz_ecef_pvt, first_xyz_ecef_lla, first_lla_pvt, first_lla_lla;
   Eigen::Matrix3d Rot_gnss_init = Eigen::Matrix3d::Identity();
-  bool gnss_ready;
-  int frame_count; //
-  int delete_thred;
+  bool gnss_ready = false;
+  int frame_count = 0; //
+  int delete_thred = 0;
   int wind_size = WINDOW_SIZE;
   bool nolidar = false;
-  bool nolidar_cur;
+  bool nolidar_cur = false;
   std::vector<Eigen::Vector3d> norm_vec_holder;
   // double para_yaw_enu_local[1];
   double para_rcv_dt[(WINDOW_SIZE+1)*4] = {0}; //
@@ -95,8 +95,8 @@ class GNSSProcess
     const ObsPtr obs;
     const EphemBasePtr ephem;
     const std::vector<double> iono_paras;
-    int freq_idx;
-    double freq;
+    int freq_idx = 0;
+    double freq = 0.0;
     Eigen::Vector3d sv_pos;
     Eigen::Vector3d sv_vel;
     double svdt, svddt, tgd;

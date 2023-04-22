@@ -3,8 +3,8 @@
 
 PointCloudXYZI::Ptr normvec(new PointCloudXYZI(100000, 1));
 std::vector<int> time_seq;
-PointCloudXYZI::Ptr feats_down_body(new PointCloudXYZI());
-PointCloudXYZI::Ptr feats_down_world(new PointCloudXYZI());
+PointCloudXYZI::Ptr feats_down_body(new PointCloudXYZI(10000, 1));
+PointCloudXYZI::Ptr feats_down_world(new PointCloudXYZI(10000, 1));
 std::vector<V3D> pbody_list;
 std::vector<PointVector> Nearest_Points; 
 KD_TREE<PointType> ikdtree;
@@ -12,8 +12,8 @@ std::vector<float> pointSearchSqDis(NUM_MATCH_POINTS);
 bool   point_selected_surf[100000] = {0};
 std::vector<M3D> crossmat_list;
 int effct_feat_num = 0;
-int k;
-int idx;
+int k = 0;
+int idx = 0;
 esekfom::esekf<state_input, 18, input_ikfom> kf_input;
 esekfom::esekf<state_output, 24, input_ikfom> kf_output;
 input_ikfom input_in;

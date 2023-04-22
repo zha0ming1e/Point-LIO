@@ -424,7 +424,7 @@ bool sync_packages(MeasureGroup &meas, queue<std::vector<ObsPtr>> &gnss_msg)
             if (gnss_meas_buf.empty())
             {
                 wait_num ++;
-                if (wait_num > 5) 
+                if (wait_num > 2) 
                 {
                     wait_num = 0;
                 }
@@ -504,7 +504,7 @@ bool sync_packages(MeasureGroup &meas, queue<std::vector<ObsPtr>> &gnss_msg)
                 if (gnss_meas_buf.empty())
                 {
                     wait_num ++;
-                    if (wait_num > 5) 
+                    if (wait_num > 2) 
                     {
                         wait_num = 0;
                     }
@@ -802,7 +802,7 @@ bool sync_packages(MeasureGroup &meas, queue<std::vector<ObsPtr>> &gnss_msg)
         if (gnss_meas_buf.empty())
         {
             wait_num ++;
-            if (wait_num > 5) 
+            if (wait_num > 2) 
             {
                 wait_num = 0;
             }

@@ -47,9 +47,9 @@ void GNSSAssignment::initNoises( void ) // maybe usable!
                             marg_noise, marg_noise, marg_noise; //, marg_noise, marg_noise, marg_noise;
     margposNoise = gtsam::noiseModel::Diagonal::Variances(margposNoiseVector9);
 
-    // gtsam::Vector priorvelNoiseVector3(3);
-    // priorvelNoiseVector3 << prior_noise, prior_noise, prior_noise;
-    // priorvelNoise = gtsam::noiseModel::Diagonal::Variances(priorvelNoiseVector3);
+    gtsam::Vector priorextrotNoiseVector3(3);
+    priorextrotNoiseVector3 << prior_noise, prior_noise, prior_noise;
+    priorextrotNoise = gtsam::noiseModel::Diagonal::Variances(priorextrotNoiseVector3);
 
     gtsam::Vector margNoiseVector3(3);
     margNoiseVector3 << prior_noise, prior_noise, prior_noise; //, marg_noise, marg_noise, marg_noise, marg_noise, marg_noise, marg_noise, 
@@ -60,9 +60,9 @@ void GNSSAssignment::initNoises( void ) // maybe usable!
     margdtNoiseVector3 << prior_noise, prior_noise, prior_noise; //, marg_noise;
     margdtNoise = gtsam::noiseModel::Diagonal::Variances(margdtNoiseVector3);
 
-    // gtsam::Vector margExtNoiseVector4(4);
-    // margExtNoiseVector4 << 1e-6, 1e-6, 1e-6, 1e-6;
-    // margExtNoise = gtsam::noiseModel::Diagonal::Variances(margExtNoiseVector4);
+    gtsam::Vector priorextposNoiseVector3(3);
+    priorextposNoiseVector3 << prior_noise, prior_noise, prior_noise;
+    priorextrotNoise = gtsam::noiseModel::Diagonal::Variances(priorextrotNoiseVector3);
 
     gtsam::Vector margddtNoiseVector3(3);
     margddtNoiseVector3 << prior_noise, prior_noise, prior_noise; //prior_noise;
@@ -388,7 +388,7 @@ void GNSSAssignment::delete_variables(bool nolidar, size_t frame_delete, int fra
             // gtsam::noiseModel::Gaussian::shared_ptr updatedERNoise = gtsam::noiseModel::Gaussian::Covariance(isam.marginalCovariance(P(0)) * 1); // important
             // gtsam::noiseModel::Gaussian::shared_ptr updatedEPNoise = gtsam::noiseModel::Gaussian::Covariance(isam.marginalCovariance(E(0)) * 1); // important
             gtsam::PriorFactor<gtsam::Rot3> init_ER(P(0),isamCurrentEstimate.at<gtsam::Rot3>(P(0)), margrotNoise); // updatedERNoise); //  
-            gtsam::PriorFactor<gtsam::Vector3> init_EP(E(0),isamCurrentEstimate.at<gtsam::Vector3>(E(0)), margrotNoise); // updatedEPNoise); //
+            gtsam::PriorFactor<gtsam::Vector3> init_EP(E(0),isamCurrentEstimate.at<gtsam::Vector3>(E(0)), margNoise); // updatedEPNoise); //
             gtSAMgraph.add(init_ER);
             gtSAMgraph.add(init_EP);
             // factor_id_frame[0].push_back(id_accumulate);

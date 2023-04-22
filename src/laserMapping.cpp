@@ -516,12 +516,12 @@ int main(int argc, char** argv)
     ros::Subscriber sub_rtk_pvt_info, sub_rtk_lla_info;
     if (GNSS_ENABLE)
     {
-        sub_ephem = nh.subscribe(gnss_ephem_topic, 1000, gnss_ephem_callback);
-        sub_glo_ephem = nh.subscribe(gnss_glo_ephem_topic, 1000, gnss_glo_ephem_callback);
-        sub_gnss_meas = nh.subscribe(gnss_meas_topic, 1000, gnss_meas_callback);
-        sub_gnss_iono_params = nh.subscribe(gnss_iono_params_topic, 1000, gnss_iono_params_callback);
-        sub_rtk_pvt_info = nh.subscribe(rtk_pvt_topic, 1000, rtk_pvt_callback);
-        sub_rtk_lla_info = nh.subscribe(rtk_lla_topic, 1000, rtk_lla_callback);
+        sub_ephem = nh.subscribe(gnss_ephem_topic, 100000, gnss_ephem_callback);
+        sub_glo_ephem = nh.subscribe(gnss_glo_ephem_topic, 100000, gnss_glo_ephem_callback);
+        sub_gnss_meas = nh.subscribe(gnss_meas_topic, 100000, gnss_meas_callback);
+        sub_gnss_iono_params = nh.subscribe(gnss_iono_params_topic, 100000, gnss_iono_params_callback);
+        sub_rtk_pvt_info = nh.subscribe(rtk_pvt_topic, 10000, rtk_pvt_callback);
+        sub_rtk_lla_info = nh.subscribe(rtk_lla_topic, 10000, rtk_lla_callback);
 
         if (gnss_local_online_sync)
         {
@@ -817,6 +817,7 @@ int main(int argc, char** argv)
                 /**** point by point update ****/
                 if (time_seq.size() > 0 || !GNSS_ENABLE)
                 {
+                p_gnss->nolidar_cur = false;
                 double pcl_beg_time = Measures.lidar_beg_time;
                 idx = -1;
                 for (k = 0; k < time_seq.size(); k++)
@@ -842,9 +843,9 @@ int main(int argc, char** argv)
                         if (GNSS_ENABLE)
                         {
                             std::vector<Eigen::Vector3d>().swap(p_gnss->norm_vec_holder);
-                            acc_avr_norm = acc_avr * G_m_s2 / acc_norm;
-                            p_gnss->pre_integration->repropagate(kf_output.x_.ba, kf_output.x_.bg);
-                            p_gnss->pre_integration->setacc0gyr0(acc_avr_norm, angvel_avr);
+                            // acc_avr_norm = acc_avr * G_m_s2 / acc_norm;
+                            // p_gnss->pre_integration->repropagate(kf_output.x_.ba, kf_output.x_.bg);
+                            // p_gnss->pre_integration->setacc0gyr0(acc_avr_norm, angvel_avr);
                         }
                         is_first_frame = false;
                         imu_upda_cov = true;
@@ -900,8 +901,8 @@ int main(int argc, char** argv)
                                             kf_output.predict(dt_cov, Q_output, input_in, false, true);
                                         }
                                         kf_output.predict(dt, Q_output, input_in, true, false);
-                                        p_gnss->pre_integration->push_back(dt, kf_output.x_.acc + kf_output.x_.ba, kf_output.x_.omg + kf_output.x_.bg); // acc_avr, angvel_avr); 
-                                        p_gnss->processIMUOutput(dt, kf_output.x_.acc, kf_output.x_.omg);
+                                        // p_gnss->pre_integration->push_back(dt, kf_output.x_.acc + kf_output.x_.ba, kf_output.x_.omg + kf_output.x_.bg); // acc_avr, angvel_avr); 
+                                        // p_gnss->processIMUOutput(dt, kf_output.x_.acc, kf_output.x_.omg);
                                         time_predict_last_const = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                                         time_update_last = time_predict_last_const;
                                         p_gnss->processGNSS(gnss_cur, kf_output.x_);
@@ -966,10 +967,10 @@ int main(int argc, char** argv)
                             kf_output.predict(dt, Q_output, input_in, true, false);
                             time_predict_last_const = imu_next.header.stamp.toSec(); // big problem
                             // if (!imu_comes)
-                            if (GNSS_ENABLE)
+                            // if (GNSS_ENABLE)
                             {
-                                p_gnss->pre_integration->push_back(dt, kf_output.x_.acc + kf_output.x_.ba, kf_output.x_.omg + kf_output.x_.bg); // acc_avr, angvel_avr); 
-                                p_gnss->processIMUOutput(dt, kf_output.x_.acc, kf_output.x_.omg);
+                                // p_gnss->pre_integration->push_back(dt, kf_output.x_.acc + kf_output.x_.ba, kf_output.x_.omg + kf_output.x_.bg); // acc_avr, angvel_avr); 
+                                // p_gnss->processIMUOutput(dt, kf_output.x_.acc, kf_output.x_.omg);
                             }
                             {
                                 double dt_cov = imu_next.header.stamp.toSec() - time_update_last; 
@@ -1027,8 +1028,8 @@ int main(int argc, char** argv)
                                 }
                                 kf_output.predict(dt, Q_output, input_in, true, false);
 
-                                p_gnss->pre_integration->push_back(dt, kf_output.x_.acc + kf_output.x_.ba, kf_output.x_.omg + kf_output.x_.bg); // acc_avr, angvel_avr); 
-                                p_gnss->processIMUOutput(dt, kf_output.x_.acc, kf_output.x_.omg);
+                                // p_gnss->pre_integration->push_back(dt, kf_output.x_.acc + kf_output.x_.ba, kf_output.x_.omg + kf_output.x_.bg); // acc_avr, angvel_avr); 
+                                // p_gnss->processIMUOutput(dt, kf_output.x_.acc, kf_output.x_.omg);
 
                                 time_predict_last_const = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                                 time_update_last = time_predict_last_const;
@@ -1097,11 +1098,11 @@ int main(int argc, char** argv)
                     kf_output.predict(dt, Q_output, input_in, true, false);
                     propag_time += omp_get_wtime() - propag_state_start;
                     time_predict_last_const = time_current;
-                    if (GNSS_ENABLE)
-                    {
-                        p_gnss->pre_integration->push_back(dt, kf_output.x_.acc + kf_output.x_.ba, kf_output.x_.omg + kf_output.x_.bg); // acc_avr, angvel_avr); 
-                        p_gnss->processIMUOutput(dt, kf_output.x_.acc, kf_output.x_.omg);
-                    }
+                    // if (GNSS_ENABLE)
+                    // {
+                    //     p_gnss->pre_integration->push_back(dt, kf_output.x_.acc + kf_output.x_.ba, kf_output.x_.omg + kf_output.x_.bg); // acc_avr, angvel_avr); 
+                    //     p_gnss->processIMUOutput(dt, kf_output.x_.acc, kf_output.x_.omg);
+                    // }
                     // if(k == 0)
                     // {
                     //     fout_imu_pbp << Measures.lidar_last_time - first_lidar_time << " " << imu_last.angular_velocity.x << " " << imu_last.angular_velocity.y << " " << imu_last.angular_velocity.z \
@@ -1376,6 +1377,7 @@ int main(int argc, char** argv)
                 effct_feat_num = 0;
                 if (time_seq.size() > 0 || !GNSS_ENABLE)
                 {
+                p_gnss->nolidar_cur = false;
                 double pcl_beg_time = Measures.lidar_beg_time;
                 idx = -1;
                 for (k = 0; k < time_seq.size(); k++)
@@ -1401,12 +1403,12 @@ int main(int argc, char** argv)
                             input_in.acc<<imu_last.linear_acceleration.x, imu_last.linear_acceleration.y, imu_last.linear_acceleration.z;
                             input_in.acc = input_in.acc * G_m_s2 / acc_norm;
                         }
-                        if (GNSS_ENABLE)
-                        {
-                            p_gnss->pre_integration->repropagate(kf_input.x_.ba, kf_input.x_.bg);
-                            p_gnss->pre_integration->setacc0gyr0(input_in.acc, input_in.gyro);
-                            std::vector<Eigen::Vector3d>().swap(p_gnss->norm_vec_holder);
-                        }
+                        // if (GNSS_ENABLE)
+                        // {
+                        //     p_gnss->pre_integration->repropagate(kf_input.x_.ba, kf_input.x_.bg);
+                        //     p_gnss->pre_integration->setacc0gyr0(input_in.acc, input_in.gyro);
+                        //     std::vector<Eigen::Vector3d>().swap(p_gnss->norm_vec_holder);
+                        // }
                     }
                     
                     while (time_current > imu_next.header.stamp.toSec()) // && !imu_deque.empty())
@@ -1441,8 +1443,8 @@ int main(int argc, char** argv)
                                     }
                                     kf_input.predict(dt_cov, Q_input, input_in, false, true);
 
-                                    p_gnss->pre_integration->push_back(dt, input_in.acc, input_in.gyro);
-                                    p_gnss->processIMU(dt, input_in.acc, input_in.gyro);
+                                    // p_gnss->pre_integration->push_back(dt, input_in.acc, input_in.gyro);
+                                    // p_gnss->processIMU(dt, input_in.acc, input_in.gyro);
                                     t_last = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                                     p_gnss->processGNSS(gnss_cur, kf_input.x_, input_in.gyro);
                                     // p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 9, 9>>(kf_input.P_.block<9, 9>(0, 0).inverse()).matrixL().transpose();
@@ -1501,11 +1503,11 @@ int main(int argc, char** argv)
                         double dt = imu_last.header.stamp.toSec() - t_last;
 
                         double dt_cov = imu_last.header.stamp.toSec() - time_update_last;
-                        if (p_gnss->gnss_ready)
-                        {
-                            p_gnss->pre_integration->push_back(dt, input_in.acc, input_in.gyro);
-                            p_gnss->processIMU(dt, input_in.acc, input_in.gyro);
-                        }
+                        // if (p_gnss->gnss_ready)
+                        // {
+                        //     p_gnss->pre_integration->push_back(dt, input_in.acc, input_in.gyro);
+                        //     p_gnss->processIMU(dt, input_in.acc, input_in.gyro);
+                        // }
                         if (dt_cov > 0.0)
                         {
                             kf_input.predict(dt_cov, Q_input, input_in, false, true); 
@@ -1553,8 +1555,8 @@ int main(int argc, char** argv)
                             }
                             kf_input.predict(dt, Q_input, input_in, true, false); 
 
-                            p_gnss->pre_integration->push_back(dt, input_in.acc, input_in.gyro);
-                            p_gnss->processIMU(dt, input_in.acc, input_in.gyro);
+                            // p_gnss->pre_integration->push_back(dt, input_in.acc, input_in.gyro);
+                            // p_gnss->processIMU(dt, input_in.acc, input_in.gyro);
                             t_last = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                             p_gnss->processGNSS(gnss_cur, kf_input.x_, input_in.gyro);
                             // p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 9, 9>>(kf_input.P_.block<9, 9>(0, 0).inverse()).matrixL().transpose();
@@ -1622,11 +1624,11 @@ int main(int argc, char** argv)
                     kf_input.predict(dt, Q_input, input_in, true, false); 
 
                     propag_time += omp_get_wtime() - propag_start;
-                    if (GNSS_ENABLE)
-                    {
-                        p_gnss->pre_integration->push_back(dt, input_in.acc, input_in.gyro);
-                        p_gnss->processIMU(dt, input_in.acc, input_in.gyro);
-                    }
+                    // if (GNSS_ENABLE)
+                    // {
+                    //     p_gnss->pre_integration->push_back(dt, input_in.acc, input_in.gyro);
+                    //     p_gnss->processIMU(dt, input_in.acc, input_in.gyro);
+                    // }
                     // if(k == 0)
                     // {
                     //     fout_imu_pbp << Measures.lidar_last_time - first_lidar_time << " " << imu_last.angular_velocity.x << " " << imu_last.angular_velocity.y << " " << imu_last.angular_velocity.z \

@@ -78,25 +78,25 @@ class GNSSAssignment
 
         bool outlier_rej = false;
         double outlier_thres = 0.1;
-        int gnss_track_num_threshold;
+        int gnss_track_num_threshold = 20;
 
-        gtsam::noiseModel::Diagonal::shared_ptr margrotNoise;
-        gtsam::noiseModel::Diagonal::shared_ptr margposNoise;
+        gtsam::noiseModel::Base::shared_ptr margrotNoise;
+        gtsam::noiseModel::Base::shared_ptr margposNoise;
         // gtsam::noiseModel::Diagonal::shared_ptr priorvelNoise;
-        gtsam::noiseModel::Diagonal::shared_ptr margNoise;
-        gtsam::noiseModel::Diagonal::shared_ptr margdtNoise;
-        gtsam::noiseModel::Diagonal::shared_ptr margddtNoise;
+        gtsam::noiseModel::Base::shared_ptr margNoise;
+        gtsam::noiseModel::Base::shared_ptr margdtNoise;
+        gtsam::noiseModel::Base::shared_ptr margddtNoise;
 
-        gtsam::noiseModel::Diagonal::shared_ptr priorrotNoise;
-        gtsam::noiseModel::Diagonal::shared_ptr priorposNoise;
-        // gtsam::noiseModel::Diagonal::shared_ptr priorvelNoise;
-        gtsam::noiseModel::Diagonal::shared_ptr priorNoise;
-        gtsam::noiseModel::Diagonal::shared_ptr priordtNoise;
-        // gtsam::noiseModel::Diagonal::shared_ptr margExtNoise;
-        gtsam::noiseModel::Diagonal::shared_ptr dtNoise;
-        gtsam::noiseModel::Diagonal::shared_ptr priorddtNoise;
-        gtsam::noiseModel::Diagonal::shared_ptr ddtNoise;
-        gtsam::noiseModel::Diagonal::shared_ptr odomNoise;
+        gtsam::noiseModel::Base::shared_ptr priorrotNoise;
+        gtsam::noiseModel::Base::shared_ptr priorposNoise;
+        gtsam::noiseModel::Base::shared_ptr priorextrotNoise;
+        gtsam::noiseModel::Base::shared_ptr priorNoise;
+        gtsam::noiseModel::Base::shared_ptr priordtNoise;
+        gtsam::noiseModel::Base::shared_ptr priorextposNoise;
+        gtsam::noiseModel::Base::shared_ptr dtNoise;
+        gtsam::noiseModel::Base::shared_ptr priorddtNoise;
+        gtsam::noiseModel::Base::shared_ptr ddtNoise;
+        gtsam::noiseModel::Base::shared_ptr odomNoise;
         // gtsam::noiseModel::Diagonal::shared_ptr odomNoiseIMU;
         gtsam::noiseModel::Base::shared_ptr odomNoiseIMU;
         gtsam::noiseModel::Base::shared_ptr robustpsrdoppNoise;
@@ -104,7 +104,7 @@ class GNSSAssignment
         // gtsam::noiseModel::Gaussian::shared_ptr testNoise;
         void initNoises(void); 
 
-        int marg_thred;
+        int marg_thred = 1;
         int change_ext = 1;
         std::deque<std::vector<size_t>> factor_id_frame; // 
 
@@ -118,11 +118,11 @@ class GNSSAssignment
         void inputEphem(EphemBasePtr ephem_ptr);
         void rinex2iono_params(const std::string &rinex_filepath, std::vector<double> &iono_params);
         void rinex2ephems(const std::string &rinex_filepath, std::map<uint32_t, std::vector<EphemBasePtr>> &sat2ephem_);
-        int freq_idx_;
+        int freq_idx_ = 0;
         double gnss_psr_std_threshold;
         double gnss_dopp_std_threshold;
         std::map<uint32_t, uint32_t> sat_track_status; //
-        double gnss_elevation_threshold;
+        double gnss_elevation_threshold = 30;
         void processGNSSBase(const std::vector<ObsPtr> &gnss_meas, std::vector<ObsPtr> &valid_meas, std::vector<EphemBasePtr> &valid_ephems, bool gnss_ready, Eigen::Vector3d ecef_pos);
         void delete_variables(bool nolidar, size_t frame_delete, int frame_num, size_t &id_accumulate, gtsam::FactorIndices delete_factor);
 
