@@ -9,7 +9,7 @@ void ImuProcess::pointBodyToWorld_li_init(PointType const * const pi, PointType 
     V3D p_global;
 
     {
-        p_global = state_LI_Init.rot.normalized() * p_body + state_LI_Init.pos;
+        p_global = state_LI_Init.rot * p_body + state_LI_Init.pos; // .normalized()
     }
 
     po->x = p_global(0);
@@ -174,7 +174,7 @@ void ImuProcess::Forward_propagation_without_imu(const MeasureGroup &meas, Point
       V3D P_j(it_pcl->x, it_pcl->y, it_pcl->z);
       // Using rotation and translation to un-distort points
       V3D p_jk;
-      p_jk = - state_LI_Init.rot.normalized().toRotationMatrix().transpose() * state_LI_Init.vel * dt_j;
+      p_jk = - state_LI_Init.rot.transpose() * state_LI_Init.vel * dt_j; // .normalized().toRotationMatrix()
 
       V3D P_compensate =  R_jk * P_j + p_jk;
 

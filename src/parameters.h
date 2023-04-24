@@ -83,6 +83,6 @@ extern MeasureGroup Measures;
 extern ofstream fout_out, fout_imu_pbp, fout_rtk;
 void readParameters(ros::NodeHandle &n);
 void open_file();
-vect3 SO3ToEuler(const SO3 &orient);
+Eigen::Matrix<double, 3, 1> SO3ToEuler(const SO3 &orient);
 void set_gnss_offline_init(bool nolidar_);
 void cout_state_to_file();

@@ -200,39 +200,25 @@ void readParameters(ros::NodeHandle &nh)
     }
 }
 
-vect3 SO3ToEuler(const SO3 &orient) 
+Eigen::Matrix<double, 3, 1> SO3ToEuler(const SO3 &rot) 
 {
-	Eigen::Matrix<double, 3, 1> _ang;
-	Eigen::Vector4d q_data = orient.coeffs().transpose();
-	//scalar w=orient.coeffs[3], x=orient.coeffs[0], y=orient.coeffs[1], z=orient.coeffs[2];
-	double sqw = q_data[3]*q_data[3];
-	double sqx = q_data[0]*q_data[0];
-	double sqy = q_data[1]*q_data[1];
-	double sqz = q_data[2]*q_data[2];
-	double unit = sqx + sqy + sqz + sqw; // if normalized is one, otherwise is correction factor
-	double test = q_data[3]*q_data[1] - q_data[2]*q_data[0];
-
-	if (test > 0.49999*unit) { // singularity at north pole
-	
-		_ang << 2 * std::atan2(q_data[0], q_data[3]), M_PI/2, 0;
-		double temp[3] = {_ang[0] * 57.3, _ang[1] * 57.3, _ang[2] * 57.3};
-		vect3 euler_ang(temp, 3);
-		return euler_ang;
-	}
-	if (test < -0.49999*unit) { // singularity at south pole
-		_ang << -2 * std::atan2(q_data[0], q_data[3]), -M_PI/2, 0;
-		double temp[3] = {_ang[0] * 57.3, _ang[1] * 57.3, _ang[2] * 57.3};
-		vect3 euler_ang(temp, 3);
-		return euler_ang;
-	}
-		
-	_ang <<
-			std::atan2(2*q_data[0]*q_data[3]+2*q_data[1]*q_data[2] , -sqx - sqy + sqz + sqw),
-			std::asin (2*test/unit),
-			std::atan2(2*q_data[2]*q_data[3]+2*q_data[1]*q_data[0] , sqx - sqy - sqz + sqw);
-	double temp[3] = {_ang[0] * 57.3, _ang[1] * 57.3, _ang[2] * 57.3};
-	vect3 euler_ang(temp, 3);
-	return euler_ang;
+    double sy = sqrt(rot(0,0)*rot(0,0) + rot(1,0)*rot(1,0));
+    bool singular = sy < 1e-6;
+    double x, y, z;
+    if(!singular)
+    {
+        x = atan2(rot(2, 1), rot(2, 2));
+        y = atan2(-rot(2, 0), sy);   
+        z = atan2(rot(1, 0), rot(0, 0));  
+    }
+    else
+    {    
+        x = atan2(-rot(1, 2), rot(1, 1));    
+        y = atan2(-rot(2, 0), sy);    
+        z = 0;
+    }
+    Eigen::Matrix<double, 3, 1> ang(x, y, z);
+    return ang;
 }
 
 void open_file()
@@ -270,13 +256,13 @@ void set_gnss_offline_init(bool nolidar_)
         {
             init_vel_bias_vector.block<3,1>(0,0) = kf_input.x_.pos;
             init_vel_bias_vector.block<3,1>(3,0) = kf_input.x_.vel;
-            rot_init = kf_input.x_.rot.normalized().toRotationMatrix();
+            rot_init = kf_input.x_.rot; //.normalized().toRotationMatrix();
         }
         else
         {
             init_vel_bias_vector.block<3,1>(0,0) = kf_output.x_.pos;
             init_vel_bias_vector.block<3,1>(3,0) = kf_output.x_.vel;
-            rot_init = kf_output.x_.rot.normalized().toRotationMatrix();
+            rot_init = kf_output.x_.rot; //.normalized().toRotationMatrix();
         }
         // init_vel_bias_vector.block<6,1>(6,0) = Eigen::Matrix<double, 6, 1>::Zero();
         gtsam::PriorFactor<gtsam::Rot3> init_rot_(R(0), gtsam::Rot3(rot_init), p_gnss->p_assign->priorrotNoise);
@@ -324,12 +310,12 @@ void set_gnss_offline_init(bool nolidar_)
             R_ecef_enu = ecef2rotation(state_in.pos);
             R_enu_local_ = Eigen::AngleAxisd(offline_init_vec[3], Eigen::Vector3d::UnitZ());
             state_in.rot = R_ecef_enu * R_enu_local_;
-            state_in.rot.normalize();
-            state_in.pos -= state_in.rot.normalized() * p_gnss->Tex_imu_r;
+            // state_in.rot.normalize();
+            state_in.pos -= state_in.rot * p_gnss->Tex_imu_r; // .normalized()
             state_in.gravity = R_ecef_enu * kf_input.x_.gravity; // * R_enu_local_ 
             kf_input.change_x(state_in);
         
-            gtsam::PriorFactor<gtsam::Rot3> init_rot(R(0), gtsam::Rot3(state_in.rot.normalized().toRotationMatrix()), p_gnss->p_assign->priorposNoise);
+            gtsam::PriorFactor<gtsam::Rot3> init_rot(R(0), gtsam::Rot3(state_in.rot), p_gnss->p_assign->priorposNoise); // .normalized().toRotationMatrix()
             gtsam::PriorFactor<gtsam::Vector4> init_dt(B(0), gtsam::Vector4(offline_init_vec[5], offline_init_vec[6], offline_init_vec[7], offline_init_vec[8]), p_gnss->p_assign->priordtNoise);
             gtsam::PriorFactor<gtsam::Vector1> init_ddt(C(0), gtsam::Vector1(offline_init_vec[4]), p_gnss->p_assign->priorddtNoise);
             // Eigen::Matrix<double, 12, 1> init_vel_bias_vector;
@@ -338,7 +324,7 @@ void set_gnss_offline_init(bool nolidar_)
             init_vel_bias_vector.block<3,1>(6,0) = state_in.ba;
             init_vel_bias_vector.block<3,1>(9,0) = state_in.bg;
             gtsam::PriorFactor<gtsam::Vector12> init_vel_bias(F(0), gtsam::Vector12(init_vel_bias_vector), p_gnss->p_assign->priorposNoise);
-            p_gnss->p_assign->initialEstimate.insert(R(0), gtsam::Rot3(state_in.rot.normalized().toRotationMatrix()));
+            p_gnss->p_assign->initialEstimate.insert(R(0), gtsam::Rot3(state_in.rot)); // .normalized().toRotationMatrix()
             p_gnss->state_ = state_in;
 
             p_gnss->p_assign->gtSAMgraph.add(init_rot);
@@ -355,12 +341,12 @@ void set_gnss_offline_init(bool nolidar_)
             R_ecef_enu = ecef2rotation(state_out.pos);
             R_enu_local_ = Eigen::AngleAxisd(offline_init_vec[3], Eigen::Vector3d::UnitZ());
             state_out.rot = R_ecef_enu * R_enu_local_;
-            state_out.rot.normalize();
-            state_out.pos -= state_out.rot.normalized() * p_gnss->Tex_imu_r;
+            // state_out.rot.normalize();
+            state_out.pos -= state_out.rot * p_gnss->Tex_imu_r; // .normalized()
             state_out.gravity = R_ecef_enu * kf_output.x_.gravity; // * R_enu_local_ 
             kf_output.change_x(state_out);
         
-            gtsam::PriorFactor<gtsam::Rot3> init_rot(R(0), gtsam::Rot3(state_out.rot.normalized().toRotationMatrix()), p_gnss->p_assign->priorposNoise);
+            gtsam::PriorFactor<gtsam::Rot3> init_rot(R(0), gtsam::Rot3(state_out.rot), p_gnss->p_assign->priorposNoise); // .normalized().toRotationMatrix()
             gtsam::PriorFactor<gtsam::Vector4> init_dt(B(0), gtsam::Vector4(offline_init_vec[5], offline_init_vec[6], offline_init_vec[7], offline_init_vec[8]), p_gnss->p_assign->priordtNoise);
             gtsam::PriorFactor<gtsam::Vector1> init_ddt(C(0), gtsam::Vector1(offline_init_vec[4]), p_gnss->p_assign->priorddtNoise);
             init_vel_bias_vector.block<3,1>(0,0) = state_out.pos;
@@ -368,7 +354,7 @@ void set_gnss_offline_init(bool nolidar_)
             init_vel_bias_vector.block<3,1>(6,0) = state_out.ba;
             init_vel_bias_vector.block<3,1>(9,0) = state_out.bg;
             gtsam::PriorFactor<gtsam::Vector12> init_vel_bias(F(0), gtsam::Vector12(init_vel_bias_vector), p_gnss->p_assign->priorposNoise);
-            p_gnss->p_assign->initialEstimate.insert(R(0), gtsam::Rot3(state_out.rot.normalized().toRotationMatrix()));
+            p_gnss->p_assign->initialEstimate.insert(R(0), gtsam::Rot3(state_out.rot)); // .normalized().toRotationMatrix()
             p_gnss->state_const_ = state_out;
         
             p_gnss->p_assign->gtSAMgraph.add(init_rot);
@@ -396,14 +382,14 @@ void cout_state_to_file()
         Eigen::Vector3d pos_enu;
         if (!nolidar)
         {
-            Eigen::Vector3d pos_r = p_gnss->state_.rot.normalized() * p_gnss->Tex_imu_r + p_gnss->state_.pos;
+            Eigen::Vector3d pos_r = p_gnss->state_.rot * p_gnss->Tex_imu_r + p_gnss->state_.pos; // .normalized()
             Eigen::Matrix3d enu_rot = p_gnss->p_assign->isamCurrentEstimate.at<gtsam::Rot3>(P(0)).matrix();
             Eigen::Vector3d anc_cur = p_gnss->p_assign->isamCurrentEstimate.at<gtsam::Vector3>(E(0));
             pos_enu = p_gnss->local2enu(enu_rot, anc_cur, pos_r);
         }
         else
         {
-            Eigen::Vector3d pos_r = kf_input.x_.rot.normalized() * p_gnss->Tex_imu_r + kf_input.x_.pos;
+            Eigen::Vector3d pos_r = kf_input.x_.rot * p_gnss->Tex_imu_r + kf_input.x_.pos; // .normalized()
             pos_enu = p_gnss->local2enu(Eigen::Matrix3d::Zero(), Eigen::Vector3d::Zero(), pos_r);
         }
         if (!p_gnss->gnss_online_init)
@@ -442,14 +428,14 @@ void cout_state_to_file()
         Eigen::Vector3d pos_enu;
         if (!nolidar)
         {
-            Eigen::Vector3d pos_r = p_gnss->state_const_.rot.normalized() * p_gnss->Tex_imu_r + p_gnss->state_const_.pos; // maybe improper
+            Eigen::Vector3d pos_r = p_gnss->state_const_.rot * p_gnss->Tex_imu_r + p_gnss->state_const_.pos; // maybe improper.normalized()
             Eigen::Matrix3d enu_rot = p_gnss->p_assign->isamCurrentEstimate.at<gtsam::Rot3>(P(0)).matrix();
             Eigen::Vector3d anc_cur = p_gnss->p_assign->isamCurrentEstimate.at<gtsam::Vector3>(E(0));
             pos_enu = p_gnss->local2enu(enu_rot, anc_cur, pos_r);
         }
         else
         {
-            Eigen::Vector3d pos_r = kf_output.x_.rot.normalized() * p_gnss->Tex_imu_r + kf_output.x_.pos;
+            Eigen::Vector3d pos_r = kf_output.x_.rot * p_gnss->Tex_imu_r + kf_output.x_.pos; // .normalized()
             pos_enu = p_gnss->local2enu(Eigen::Matrix3d::Zero(), Eigen::Vector3d::Zero(), pos_r);
         }
         if (!p_gnss->gnss_online_init)
