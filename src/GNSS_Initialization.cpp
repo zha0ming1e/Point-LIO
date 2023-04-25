@@ -31,10 +31,10 @@ bool GNSSLIInitializer::coarse_localization(Eigen::Matrix<double, 7, 1> &result)
         return false;
     }
 
-    for (uint32_t k = 0; k < 4; ++k)
+    for (uint32_t k_ = 0; k_ < 4; ++k_)
     {
-        if (fabs(xyzt(k+3)) < 1)
-            xyzt(k+3) = 0;          // not observed yet
+        if (fabs(xyzt(k_+3)) < 1)
+            xyzt(k_+3) = 0;          // not observed yet
     }
 
     result = xyzt;
@@ -125,10 +125,10 @@ bool GNSSLIInitializer::anchor_refinement(const std::vector<Eigen::Vector3d> &lo
     // }
     // refine_pos /= local_ps.size();
     std::vector<uint32_t> unobserved_sys;
-    for (uint32_t k = 0; k < 4; ++k)
+    for (uint32_t k_ = 0; k_ < 4; ++k_)
     {
-        if (rough_ecef_dt(3+k) == 0)
-            unobserved_sys.push_back(k);
+        if (rough_ecef_dt(3+k_) == 0)
+            unobserved_sys.push_back(k_);
     }
 
     while (refine_iter < MAX_ITERATION && refine_dx_norm > CONVERGENCE_EPSILON)
@@ -291,7 +291,7 @@ bool GNSSLIInitializer::yaw_refinement(const std::vector<Eigen::Vector3d> &local
                 sys_mask[sys2idx.at(obs_sys)] = 1;
             }
             uint32_t num_extra_constraint = 4;
-            for (uint32_t k = 0; k < 4; ++k)    num_extra_constraint -= sys_mask[k];
+            for (uint32_t k_ = 0; k_ < 4; ++k_)    num_extra_constraint -= sys_mask[k_];
             LOG_IF(FATAL, num_extra_constraint >= 4) << "[gnss_comm::psr_pos] too many extra-clock constraints.\n";
 
             const uint32_t good_num = good_idx.size();
@@ -328,12 +328,12 @@ bool GNSSLIInitializer::yaw_refinement(const std::vector<Eigen::Vector3d> &local
             }
             uint32_t tmp_count = good_num;
             // add extra pseudo measurement to contraint unobservable clock bias
-            for (size_t k = 0; k < 4; ++k)
+            for (size_t k_ = 0; k_ < 4; ++k_)
             {
-                if (!sys_mask[k])
+                if (!sys_mask[k_])
                 {
                     good_G.row(tmp_count).setZero();
-                    good_G(tmp_count, k+3) = 1.0;
+                    good_G(tmp_count, k_+3) = 1.0;
                     good_b(tmp_count) = 0;
                     good_W(tmp_count, tmp_count) = 1000;       // large weight
                     ++tmp_count;

@@ -119,8 +119,8 @@ class GNSSAssignment
         void rinex2iono_params(const std::string &rinex_filepath, std::vector<double> &iono_params);
         void rinex2ephems(const std::string &rinex_filepath, std::map<uint32_t, std::vector<EphemBasePtr>> &sat2ephem_);
         int freq_idx_ = 0;
-        double gnss_psr_std_threshold;
-        double gnss_dopp_std_threshold;
+        double gnss_psr_std_threshold = 30.0;
+        double gnss_dopp_std_threshold = 30.0;
         std::map<uint32_t, uint32_t> sat_track_status; //
         double gnss_elevation_threshold = 30;
         void processGNSSBase(const std::vector<ObsPtr> &gnss_meas, std::vector<ObsPtr> &valid_meas, std::vector<EphemBasePtr> &valid_ephems, bool gnss_ready, Eigen::Vector3d ecef_pos);

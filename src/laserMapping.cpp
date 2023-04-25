@@ -122,13 +122,10 @@ void pointBodyLidarToIMU(PointType const * const pi, PointType * const po)
     po->intensity = pi->intensity;
 }
 
-int points_cache_size = 0;
-
 void points_cache_collect() // seems for debug
 {
     PointVector points_history;
     ikdtree.acquire_removed_points(points_history);
-    points_cache_size = points_history.size();
 }
 
 BoxPointType LocalMap_Points;
@@ -184,6 +181,7 @@ void lasermap_fov_segment()
     LocalMap_Points = New_LocalMap_Points;
 
     points_cache_collect();
+    if(cub_needrm.size() > 0) int kdtree_delete_counter = ikdtree.Delete_Point_Boxes(cub_needrm);
 }
 
 int process_increments = 0;
@@ -201,11 +199,11 @@ void map_incremental()
                 p_imu->pointBodyToWorld_li_init(&(feats_down_body->points[i]), &(feats_down_world->points[i]));
             }
             /* No points found within the given threshold of nearest search*/
-            if (Nearest_Points[i].empty()){
+            // if (Nearest_Points[i].empty()){
                 
-                PointNoNeedDownsample.emplace_back(feats_down_world->points[i]);
-                continue;          
-            }      
+            //     PointNoNeedDownsample.emplace_back(feats_down_world->points[i]);
+            //     continue;          
+            // }      
             /* decide if need add to map */
             
             if (!Nearest_Points[i].empty())
@@ -218,7 +216,7 @@ void map_incremental()
                 mid_point.y = floor(feats_down_world->points[i].y/filter_size_map_min)*filter_size_map_min + 0.5 * filter_size_map_min;
                 mid_point.z = floor(feats_down_world->points[i].z/filter_size_map_min)*filter_size_map_min + 0.5 * filter_size_map_min;
                 /* If the nearest points is definitely outside the downsample box */
-                if (fabs(points_near[0].x - mid_point.x) > 1.732 * filter_size_map_min || fabs(points_near[0].y - mid_point.y) > 1.732 * filter_size_map_min || fabs(points_near[0].z - mid_point.z) > 1.732 * filter_size_map_min){
+                if (fabs(points_near[0].x - mid_point.x) > 0.5 * filter_size_map_min && fabs(points_near[0].y - mid_point.y) > 0.5 * filter_size_map_min && fabs(points_near[0].z - mid_point.z) > 0.5 * filter_size_map_min){
                     PointNoNeedDownsample.emplace_back(feats_down_world->points[i]);
                     continue;
                 }
@@ -228,9 +226,9 @@ void map_incremental()
                 {
                     if (points_near.size() < NUM_MATCH_POINTS) break;
                     /* Those points which are outside the downsample box should not be considered. */
-                    if (fabs(points_near[readd_i].x - mid_point.x) > 0.5 * filter_size_map_min || fabs(points_near[readd_i].y - mid_point.y) > 0.5 * filter_size_map_min || fabs(points_near[readd_i].z - mid_point.z) > 0.5 * filter_size_map_min) {
-                        continue;                    
-                    }
+                    // if (fabs(points_near[readd_i].x - mid_point.x) > 0.5 * filter_size_map_min || fabs(points_near[readd_i].y - mid_point.y) > 0.5 * filter_size_map_min || fabs(points_near[readd_i].z - mid_point.z) > 0.5 * filter_size_map_min) {
+                    //     continue;                    
+                    // }
                     if (calc_dist<float>(points_near[readd_i], mid_point) < dist)
                     {
                         need_add = false;
@@ -244,7 +242,7 @@ void map_incremental()
                 PointToAdd.emplace_back(feats_down_world->points[i]);
             }
         }
-    
+    int add_point_size = ikdtree.Add_Points(PointToAdd, true);
     ikdtree.Add_Points(PointNoNeedDownsample, false);
 }
 
@@ -424,6 +422,8 @@ int main(int argc, char** argv)
 {
     ros::init(argc, argv, "laserMapping");
     ros::NodeHandle nh("~");
+    ros::AsyncSpinner spinner(0);
+    spinner.start();
     readParameters(nh);
     cout<<"lidar_type: "<<lidar_type<<endl;
     
@@ -560,7 +560,7 @@ int main(int argc, char** argv)
             ("/planner_normal", 1000);
 //------------------------------------------------------------------------------------------------------
     signal(SIGINT, SigHandle);
-    ros::Rate rate(5000);
+    ros::Rate loop_rate(500);
     bool status = ros::ok();
     while (status)
     {
@@ -587,6 +587,7 @@ int main(int argc, char** argv)
                 }
                 is_first_gnss = true;
                 flg_first_scan = true;
+                is_first_frame = true;
                 flg_reset = false;
                 init_map = false;
                 if (p_imu->UseLIInit)
@@ -734,6 +735,7 @@ int main(int argc, char** argv)
                 else
                 {
                     ikdtree.Build(init_feats_world->points); 
+                    init_feats_world.reset(new PointCloudXYZI());
                     init_map = true;
                     publish_init_kdtree(pubLaserCloudMap); //(pubLaserCloudFullRes);
                 }
@@ -1410,7 +1412,7 @@ int main(int argc, char** argv)
                         // {
                         //     p_gnss->pre_integration->repropagate(kf_input.x_.ba, kf_input.x_.bg);
                         //     p_gnss->pre_integration->setacc0gyr0(input_in.acc, input_in.gyro);
-                        //     std::vector<Eigen::Vector3d>().swap(p_gnss->norm_vec_holder);
+                            std::vector<Eigen::Vector3d>().swap(p_gnss->norm_vec_holder);
                         // }
                     }
                     
@@ -1981,7 +1983,7 @@ int main(int argc, char** argv)
             }
         }
         status = ros::ok();
-        rate.sleep();
+        loop_rate.sleep();
     }
     //--------------------------save map-----------------------------------
     /* 1. make sure you have enough memories

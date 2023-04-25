@@ -352,20 +352,20 @@ public:
 			Matrix<double, n, 3> KH;
 			
 			{
-				PHT = P_.template block<n, 3>(0, 0) * Hsub_T;
-				HPHT = dyn_share.h_GNSS * PHT.template block<3, 3>(0, 0);
+				PHT = P_.template block<n, 3>(0, 0); // * Hsub_T;
+				HPHT = PHT.template block<3, 3>(0, 0); // dyn_share.h_GNSS * 
 				for (int m_ = 0; m_ < 3; m_++)
 				{
 					HPHT(m_,m_) += dyn_share.M_Noise;
 				}
 				K = PHT * HPHT.inverse();
-				KH = K * dyn_share.h_GNSS;
+				KH = K; // * dyn_share.h_GNSS;
 			}
 			
                                     
             Matrix<scalar_type, n, 1> dx_ = K * dyn_share.z_GNSS;
 
-            P_ -= KH * P_.template block<3, n>(0, 0);
+            P_ = P_ - KH * P_.template block<3, n>(0, 0);
 			x_.boxplus(dx_);
 		}
 		

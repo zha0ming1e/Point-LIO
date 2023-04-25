@@ -897,12 +897,12 @@ bool GNSSProcess::GNSSLIAlign()
   for (uint32_t i = 0; i < (WINDOW_SIZE+1); ++i)
   {
       para_rcv_ddt[i] = aligned_rcv_ddt;
-      for (uint32_t k = 0; k < 4; ++k)
+      for (uint32_t k_ = 0; k_ < 4; ++k_)
       {
-          if (rough_xyzt(k+3) == 0)
-              para_rcv_dt[i*4+k] = refined_xyzt(3+one_observed_sys) + aligned_rcv_ddt * (time2sec(gnss_meas_buf[i][0]->time) - time2sec(gnss_meas_buf[0][0]->time)); // why multiply i? should it be dt? how to get dt (TODO)
+          if (rough_xyzt(k_+3) == 0)
+              para_rcv_dt[i*4+k_] = refined_xyzt(3+one_observed_sys) + aligned_rcv_ddt * (time2sec(gnss_meas_buf[i][0]->time) - time2sec(gnss_meas_buf[0][0]->time)); // why multiply i? should it be dt? how to get dt (TODO)
           else
-              para_rcv_dt[i*4+k] = refined_xyzt(3+k) + aligned_rcv_ddt * (time2sec(gnss_meas_buf[i][0]->time) - time2sec(gnss_meas_buf[0][0]->time));
+              para_rcv_dt[i*4+k_] = refined_xyzt(3+k_) + aligned_rcv_ddt * (time2sec(gnss_meas_buf[i][0]->time) - time2sec(gnss_meas_buf[0][0]->time));
       }
   }
   anc_ecef = refined_xyzt.head<3>();

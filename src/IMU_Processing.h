@@ -51,7 +51,7 @@ class ImuProcess
   bool   after_imu_init_ = false;
   bool   b_first_frame_ = true;
   bool   LI_init_done = true;
-  bool   UseLIInit;
+  bool   UseLIInit = false;
   double time_last_scan = 0.0;
   V3D cov_gyr_scale = V3D(0.0001, 0.0001, 0.0001);
   V3D cov_vel_scale = V3D(0.0001, 0.0001, 0.0001);

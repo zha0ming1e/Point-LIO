@@ -66,10 +66,10 @@ void gnss_meas_callback(const GnssMeasMsgConstPtr &meas_msg)
     // cerr << "gnss ts is " << std::setprecision(20) << time2sec(gnss_meas[0]->time) << endl;
     if (!time_diff_valid)   return;
 
-    mtx_buffer.lock();
+    // mtx_buffer.lock();
     gnss_meas_buf.push(std::move(gnss_meas)); // ?
-    mtx_buffer.unlock();
-    sig_buffer.notify_all(); // notify_one()?
+    // mtx_buffer.unlock();
+    // sig_buffer.notify_all(); // notify_one()?
 }
 
 void local_trigger_info_callback(const ligo::LocalSensorExternalTriggerConstPtr &trigger_msg) // pps time sync
@@ -110,7 +110,7 @@ void gnss_tp_info_callback(const GnssTimePulseInfoMsgConstPtr &tp_msg) // time s
 
 void standard_pcl_cbk(const sensor_msgs::PointCloud2::ConstPtr &msg) 
 {
-    mtx_buffer.lock();
+    // mtx_buffer.lock();
     scan_count ++;
     double preprocess_start_time = omp_get_wtime();
     if (msg->header.stamp.toSec() < last_timestamp_lidar)
@@ -118,8 +118,8 @@ void standard_pcl_cbk(const sensor_msgs::PointCloud2::ConstPtr &msg)
         ROS_ERROR("lidar loop back, clear buffer");
         // lidar_buffer.shrink_to_fit();
 
-        mtx_buffer.unlock();
-        sig_buffer.notify_all();
+        // mtx_buffer.unlock();
+        // sig_buffer.notify_all();
         return;
     }
 
@@ -180,21 +180,21 @@ void standard_pcl_cbk(const sensor_msgs::PointCloud2::ConstPtr &msg)
     }
     }
     s_plot11[scan_count] = omp_get_wtime() - preprocess_start_time;
-    mtx_buffer.unlock();
-    sig_buffer.notify_all();
+    // mtx_buffer.unlock();
+    // sig_buffer.notify_all();
 }
 
 void livox_pcl_cbk(const livox_ros_driver::CustomMsg::ConstPtr &msg) 
 {
-    mtx_buffer.lock();
+    // mtx_buffer.lock();
     double preprocess_start_time = omp_get_wtime();
     scan_count ++;
     if (msg->header.stamp.toSec() < last_timestamp_lidar)
     {
         ROS_ERROR("lidar loop back, clear buffer");
 
-        mtx_buffer.unlock();
-        sig_buffer.notify_all();
+        // mtx_buffer.unlock();
+        // sig_buffer.notify_all();
         return;
         // lidar_buffer.shrink_to_fit();
     }
@@ -256,13 +256,13 @@ void livox_pcl_cbk(const livox_ros_driver::CustomMsg::ConstPtr &msg)
     }
     }
     s_plot11[scan_count] = omp_get_wtime() - preprocess_start_time;
-    mtx_buffer.unlock();
-    sig_buffer.notify_all();
+    // mtx_buffer.unlock();
+    // sig_buffer.notify_all();
 }
 
 void imu_cbk(const sensor_msgs::Imu::ConstPtr &msg_in) 
 {
-    mtx_buffer.lock();
+    // mtx_buffer.lock();
 
     // publish_count ++;
     sensor_msgs::Imu::Ptr msg(new sensor_msgs::Imu(*msg_in));
@@ -282,8 +282,8 @@ void imu_cbk(const sensor_msgs::Imu::ConstPtr &msg_in)
         {
             Init_LI->IMU_buffer_clear();
         }
-        mtx_buffer.unlock();
-        sig_buffer.notify_all();
+        // mtx_buffer.unlock();
+        // sig_buffer.notify_all();
         return;
     }
     // push all IMU meas into Init_LI
@@ -292,8 +292,8 @@ void imu_cbk(const sensor_msgs::Imu::ConstPtr &msg_in)
 
     imu_deque.emplace_back(msg);
     last_timestamp_imu = timestamp;
-    mtx_buffer.unlock();
-    sig_buffer.notify_all();
+    // mtx_buffer.unlock();
+    // sig_buffer.notify_all();
 }
 
 bool sync_packages(MeasureGroup &meas, queue<std::vector<ObsPtr>> &gnss_msg)

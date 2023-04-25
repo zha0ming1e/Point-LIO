@@ -33,7 +33,7 @@ ImuProcess::ImuProcess()
 {
   imu_en = true;
   init_iter_num = 1;
-  mean_acc      = V3D(0, 0, -1.0);
+  mean_acc      = V3D(0, 0, 0.0);
   mean_gyr      = V3D(0, 0, 0);
   after_imu_init_ = false;
   state_cov.setIdentity();

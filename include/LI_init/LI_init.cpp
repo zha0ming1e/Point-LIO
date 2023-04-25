@@ -95,8 +95,8 @@ void LI_Init::downsample_interpolate_IMU(const double &move_start_time) {
     int mean_filt_size = 2;
     for (int i = mean_filt_size; i < IMU_state_group_ALL.size() - mean_filt_size; i++) {
         V3D acc_real = Zero3d;
-        for (int k = -mean_filt_size; k < mean_filt_size + 1; k++)
-            acc_real += (IMU_states_all_origin[i + k].linear_acc - acc_real) / (k + mean_filt_size + 1);
+        for (int k_ = -mean_filt_size; k_ < mean_filt_size + 1; k_++)
+            acc_real += (IMU_states_all_origin[i + k_].linear_acc - acc_real) / (k_ + mean_filt_size + 1);
         IMU_state_group_ALL[i].linear_acc = acc_real;
     }
 

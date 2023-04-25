@@ -13,7 +13,7 @@ bool   point_selected_surf[100000] = {0};
 std::vector<M3D> crossmat_list;
 int effct_feat_num = 0;
 int k = 0;
-int idx = 0;
+int idx = -1;
 esekfom::esekf<state_input, 18, input_ikfom> kf_input;
 esekfom::esekf<state_output, 24, input_ikfom> kf_output;
 input_ikfom input_in;
@@ -127,7 +127,7 @@ void h_model_input(state_input &s, esekfom::dyn_share_modified<double> &ekfom_da
 		{
 			auto &points_near = Nearest_Points[idx+j+1];
 			
-			ikdtree.Nearest_Search(point_world_j, NUM_MATCH_POINTS, points_near, pointSearchSqDis, 3.0); //, 1.0); // 2.236;
+			ikdtree.Nearest_Search(point_world_j, NUM_MATCH_POINTS, points_near, pointSearchSqDis, 2.236); // 3.0); //, 1.0); // 2.236;
 			
 			if ((points_near.size() < NUM_MATCH_POINTS) || pointSearchSqDis[NUM_MATCH_POINTS - 1] > 5) // 5)
 			{
@@ -159,6 +159,7 @@ void h_model_input(state_input &s, esekfom::dyn_share_modified<double> &ekfom_da
 		return;
 	}
 	ekfom_data.M_Noise = laser_point_cov;
+	ekfom_data.h_x.resize(effect_num_k, 6);
 	ekfom_data.h_x = Eigen::MatrixXd::Zero(effect_num_k, 6); //12);
 	ekfom_data.z.resize(effect_num_k);
 	int m = 0;
@@ -212,7 +213,7 @@ void h_model_output(state_output &s, esekfom::dyn_share_modified<double> &ekfom_
 		{
 			auto &points_near = Nearest_Points[idx+j+1];
 			
-			ikdtree.Nearest_Search(point_world_j, NUM_MATCH_POINTS, points_near, pointSearchSqDis, 3.0); 
+			ikdtree.Nearest_Search(point_world_j, NUM_MATCH_POINTS, points_near, pointSearchSqDis, 2.236); 
 			
 			if ((points_near.size() < NUM_MATCH_POINTS) || pointSearchSqDis[NUM_MATCH_POINTS - 1] > 5)
 			{
@@ -245,6 +246,7 @@ void h_model_output(state_output &s, esekfom::dyn_share_modified<double> &ekfom_
 		return;
 	}
 	ekfom_data.M_Noise = laser_point_cov;
+	ekfom_data.h_x.resize(effect_num_k, 6);
 	ekfom_data.h_x = Eigen::MatrixXd::Zero(effect_num_k, 6); // 12);
 	ekfom_data.z.resize(effect_num_k);
 	int m = 0;
@@ -410,7 +412,7 @@ void LI_Init_update()
 
 			if (nearest_search_en) {
 				/** Find the closest surfaces in the map **/
-				ikdtree.Nearest_Search(point_world, NUM_MATCH_POINTS, points_near, pointSearchSqDis, 5);
+				ikdtree.Nearest_Search(point_world, NUM_MATCH_POINTS, points_near, pointSearchSqDis, 2.236);
 				if (points_near.size() < NUM_MATCH_POINTS)
 					point_selected_surf[i] = false;
 				else

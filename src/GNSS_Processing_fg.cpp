@@ -401,16 +401,16 @@ bool GNSSProcess::GNSSLIAlign()
     bool dt_fail[4];
     memset(dt_fail, false, sizeof(dt_fail));
     size_t num_dt_fail = 0, dt_success = 0;
-    for (uint32_t k = 0; k < 4; k++)
+    for (uint32_t k_ = 0; k_ < 4; k_++)
     {
-      if (rough_xyzt(3+k) == 0)
+      if (rough_xyzt(3+k_) == 0)
       {
         num_dt_fail += 1;
-        dt_fail[k] = true;
+        dt_fail[k_] = true;
       }
       else
       {
-        dt_success = k;
+        dt_success = k_;
       }
     }
     if (num_dt_fail == 4)

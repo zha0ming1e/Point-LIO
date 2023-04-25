@@ -281,7 +281,6 @@ Preprocess::process_cut_frame_pcl2(const sensor_msgs::PointCloud2::ConstPtr &msg
         return;
     }
 
-
     sort(pl_surf.points.begin(), pl_surf.points.end(), time_list_cut_frame);
 
     //ms

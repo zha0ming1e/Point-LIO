@@ -155,11 +155,11 @@ std::vector<int> time_compressing(const PointCloudXYZI::Ptr &point_cloud)
       j = 0;
     }
   }
-  if (j == 0)
-  {
-    time_seq.emplace_back(1);
-  }
-  else
+//   if (j == 0)
+//   {
+//     time_seq.emplace_back(1);
+//   }
+//   else
   {
     time_seq.emplace_back(j+1);
   }
