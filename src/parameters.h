@@ -19,17 +19,27 @@
 #include <fstream>
 #include <csignal>
 #include <unistd.h>
+#include <ivox/ivox3d.h>
 #include <Python.h>
 #include <condition_variable>
 #include <sensor_msgs/Imu.h>
 #include <pcl/common/transforms.h>
 #include <geometry_msgs/Vector3.h>
 
+// #define IVOX_NODE_TYPE_PHC
+
+#ifdef IVOX_NODE_TYPE_PHC
+    using IVoxType = faster_lio::IVox<3, faster_lio::IVoxNodeType::PHC, PointType>;
+#else
+    using IVoxType = faster_lio::IVox<3, faster_lio::IVoxNodeType::DEFAULT, PointType>;
+#endif
+
 extern bool is_first_frame;
 extern double lidar_end_time, first_lidar_time, time_con;
 extern double last_timestamp_lidar, last_timestamp_imu;
 extern int pcd_index;
-
+extern IVoxType::Options ivox_options_;
+extern int ivox_nearby_type;
 extern state_input state_in;
 extern state_output state_out;
 extern std::string lid_topic, imu_topic;

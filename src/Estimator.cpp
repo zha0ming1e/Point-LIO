@@ -7,7 +7,7 @@ PointCloudXYZI::Ptr feats_down_body(new PointCloudXYZI(10000, 1));
 PointCloudXYZI::Ptr feats_down_world(new PointCloudXYZI(10000, 1));
 std::vector<V3D> pbody_list;
 std::vector<PointVector> Nearest_Points; 
-KD_TREE<PointType> ikdtree;
+std::shared_ptr<IVoxType> ivox_ = nullptr;                    // localmap in ivox
 std::vector<float> pointSearchSqDis(NUM_MATCH_POINTS);
 bool   point_selected_surf[100000] = {0};
 std::vector<M3D> crossmat_list;
@@ -123,12 +123,9 @@ void h_model_input(state_input &s, esekfom::dyn_share_modified<double> &ekfom_da
 		V3D p_body = pbody_list[idx+j+1];
 		V3D p_world;
 		p_world << point_world_j.x, point_world_j.y, point_world_j.z;
-		
 		{
 			auto &points_near = Nearest_Points[idx+j+1];
-			
-			ikdtree.Nearest_Search(point_world_j, NUM_MATCH_POINTS, points_near, pointSearchSqDis, 2.236); // 3.0); //, 1.0); // 2.236;
-			
+            ivox_->GetClosestPoint(point_world_j, points_near, NUM_MATCH_POINTS); // 
 			if ((points_near.size() < NUM_MATCH_POINTS) || pointSearchSqDis[NUM_MATCH_POINTS - 1] > 5) // 5)
 			{
 				point_selected_surf[idx+j+1] = false;
@@ -228,7 +225,7 @@ void h_model_output(state_output &s, esekfom::dyn_share_modified<double> &ekfom_
 		{
 			auto &points_near = Nearest_Points[idx+j+1];
 			
-			ikdtree.Nearest_Search(point_world_j, NUM_MATCH_POINTS, points_near, pointSearchSqDis, 2.236); 
+            ivox_->GetClosestPoint(point_world_j, points_near, NUM_MATCH_POINTS); // 
 			
 			if ((points_near.size() < NUM_MATCH_POINTS) || pointSearchSqDis[NUM_MATCH_POINTS - 1] > 5)
 			{
@@ -444,7 +441,7 @@ void LI_Init_update()
 
 			if (nearest_search_en) {
 				/** Find the closest surfaces in the map **/
-				ikdtree.Nearest_Search(point_world, NUM_MATCH_POINTS, points_near, pointSearchSqDis, 5);
+                ivox_->GetClosestPoint(point_world, points_near, NUM_MATCH_POINTS); // 
 				if (points_near.size() < NUM_MATCH_POINTS)
 					point_selected_surf[i] = false;
 				else

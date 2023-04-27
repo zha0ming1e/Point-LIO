@@ -100,7 +100,6 @@ catkin_package(
 )
 
 add_executable(ligo_mapping src/laserMapping.cpp 
-                include/ikd-Tree/ikd_Tree.cpp 
                 include/LI_init/LI_init.cpp
                 src/li_initialization.cpp src/parameters.cpp src/preprocess.cpp src/Estimator.cpp 
                 src/IMU_Processing.cpp src/GNSS_Processing_fg.cpp src/GNSS_Initialization.cpp src/GNSS_Assignment.cpp)

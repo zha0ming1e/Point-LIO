@@ -7,7 +7,7 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/filters/voxel_grid.h>
-#include <ikd-Tree/ikd_Tree.h>
+// #include <ikd-Tree/ikd_Tree.h>
 #include <pcl/io/pcd_io.h>
 
 extern PointCloudXYZI::Ptr normvec; //(new PointCloudXYZI(100000, 1));
@@ -16,7 +16,7 @@ extern PointCloudXYZI::Ptr feats_down_body; //(new PointCloudXYZI());
 extern PointCloudXYZI::Ptr feats_down_world; //(new PointCloudXYZI());
 extern std::vector<V3D> pbody_list;
 extern std::vector<PointVector> Nearest_Points; 
-extern KD_TREE<PointType> ikdtree;
+extern std::shared_ptr<IVoxType> ivox_;                    // localmap in ivox
 extern std::vector<float> pointSearchSqDis;
 extern bool point_selected_surf[100000]; // = {0};
 extern std::vector<M3D> crossmat_list;

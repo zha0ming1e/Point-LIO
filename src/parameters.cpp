@@ -4,6 +4,8 @@ bool is_first_frame = true;
 double lidar_end_time = 0.0, first_lidar_time = 0.0, time_con = 0.0;
 double last_timestamp_lidar = -1.0, last_timestamp_imu = -1.0;
 int pcd_index = 0;
+IVoxType::Options ivox_options_;
+int ivox_nearby_type = 6;
 
 state_input state_in;
 state_output state_out;
@@ -124,6 +126,20 @@ void readParameters(ros::NodeHandle &nh)
   nh.param<vector<double>>("gnss/gnss_extrinsic_R", extrinR_gnss, vector<double>());
   nh.param<vector<double>>("gnss/offline_init_vec", offline_init_vec, vector<double>());
 
+  nh.param<float>("mapping/ivox_grid_resolution", ivox_options_.resolution_, 0.2);
+  nh.param<int>("ivox_nearby_type", ivox_nearby_type, 18);
+  if (ivox_nearby_type == 0) {
+    ivox_options_.nearby_type_ = IVoxType::NearbyType::CENTER;
+  } else if (ivox_nearby_type == 6) {
+    ivox_options_.nearby_type_ = IVoxType::NearbyType::NEARBY6;
+  } else if (ivox_nearby_type == 18) {
+    ivox_options_.nearby_type_ = IVoxType::NearbyType::NEARBY18;
+  } else if (ivox_nearby_type == 26) {
+    ivox_options_.nearby_type_ = IVoxType::NearbyType::NEARBY26;
+  } else {
+    LOG(WARNING) << "unknown ivox_nearby_type, use NEARBY18";
+    ivox_options_.nearby_type_ = IVoxType::NearbyType::NEARBY18;
+  }
     nh.param<bool>("initialization/LIInit_en", p_imu->UseLIInit, false);
     if (p_imu->UseLIInit)
     {

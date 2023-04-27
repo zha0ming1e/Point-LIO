@@ -36,8 +36,6 @@ double match_time = 0, solve_time = 0, propag_time = 0, update_time = 0;
 
 bool  flg_reset = false, flg_exit = false;
 
-vector<BoxPointType> cub_needrm;
-
 //surf feature in map
 PointCloudXYZI::Ptr feats_undistort(new PointCloudXYZI());
 PointCloudXYZI::Ptr feats_down_body_space(new PointCloudXYZI());
@@ -122,147 +120,49 @@ void pointBodyLidarToIMU(PointType const * const pi, PointType * const po)
     po->intensity = pi->intensity;
 }
 
-void points_cache_collect() // seems for debug
-{
-    PointVector points_history;
-    ikdtree.acquire_removed_points(points_history);
-}
+void MapIncremental() {
+    PointVector points_to_add;
+    int cur_pts = feats_down_world->size();
+    points_to_add.reserve(cur_pts);
 
-BoxPointType LocalMap_Points;
-bool Localmap_Initialized = false;
-void lasermap_fov_segment()
-{
-    cub_needrm.shrink_to_fit();
+    for (size_t i = 0; i < cur_pts; ++i) {
+        /* decide if need add to map */
+        PointType &point_world = feats_down_world->points[i];
+        if (!Nearest_Points[i].empty()) {
+            const PointVector &points_near = Nearest_Points[i];
 
-    V3D pos_LiD;
-    if (use_imu_as_input)
-    {
-        state_in = kf_input.x_;
-        pos_LiD = state_in.pos + state_in.rot * Lidar_T_wrt_IMU; // .normalized()
-    }
-    else
-    {
-        state_out = kf_output.x_;
-        pos_LiD = state_out.pos + state_out.rot * Lidar_T_wrt_IMU; // .normalized()
-    }
-    if (!Localmap_Initialized){
-        for (int i = 0; i < 3; i++){
-            LocalMap_Points.vertex_min[i] = pos_LiD(i) - cube_len / 2.0;
-            LocalMap_Points.vertex_max[i] = pos_LiD(i) + cube_len / 2.0;
-        }
-        Localmap_Initialized = true;
-        return;
-    }
-    float dist_to_map_edge[3][2];
-    bool need_move = false;
-    for (int i = 0; i < 3; i++){
-        dist_to_map_edge[i][0] = fabs(pos_LiD(i) - LocalMap_Points.vertex_min[i]);
-        dist_to_map_edge[i][1] = fabs(pos_LiD(i) - LocalMap_Points.vertex_max[i]);
-        if (dist_to_map_edge[i][0] <= MOV_THRESHOLD * DET_RANGE || dist_to_map_edge[i][1] <= MOV_THRESHOLD * DET_RANGE) need_move = true;
-    }
-    if (!need_move) return;
-    BoxPointType New_LocalMap_Points, tmp_boxpoints;
-    New_LocalMap_Points = LocalMap_Points;
-    float mov_dist = max((cube_len - 2.0 * MOV_THRESHOLD * DET_RANGE) * 0.5 * 0.9, double(DET_RANGE * (MOV_THRESHOLD -1)));
-    for (int i = 0; i < 3; i++){
-        tmp_boxpoints = LocalMap_Points;
-        if (dist_to_map_edge[i][0] <= MOV_THRESHOLD * DET_RANGE){
-            New_LocalMap_Points.vertex_max[i] -= mov_dist;
-            New_LocalMap_Points.vertex_min[i] -= mov_dist;
-            tmp_boxpoints.vertex_min[i] = LocalMap_Points.vertex_max[i] - mov_dist;
-            cub_needrm.emplace_back(tmp_boxpoints);
-        } else if (dist_to_map_edge[i][1] <= MOV_THRESHOLD * DET_RANGE){
-            New_LocalMap_Points.vertex_max[i] += mov_dist;
-            New_LocalMap_Points.vertex_min[i] += mov_dist;
-            tmp_boxpoints.vertex_max[i] = LocalMap_Points.vertex_min[i] + mov_dist;
-            cub_needrm.emplace_back(tmp_boxpoints);
-        }
-    }
-    LocalMap_Points = New_LocalMap_Points;
-
-    points_cache_collect();
-    if(cub_needrm.size() > 0) int kdtree_delete_counter = ikdtree.Delete_Point_Boxes(cub_needrm);
-}
-
-int process_increments = 0;
-void map_incremental()
-{
-    PointVector PointToAdd;
-    PointVector PointNoNeedDownsample;
-    PointToAdd.reserve(feats_down_size);
-    PointNoNeedDownsample.reserve(feats_down_size);
-    
-        for(int i = 0; i < feats_down_size; i++)
-        {
-            if (p_imu->UseLIInit && !p_imu->LI_init_done)
-            {
-                p_imu->pointBodyToWorld_li_init(&(feats_down_body->points[i]), &(feats_down_world->points[i]));
-            }
-            /* No points found within the given threshold of nearest search*/
-            // if (Nearest_Points[i].empty()){
-                
-            //     PointNoNeedDownsample.emplace_back(feats_down_world->points[i]);
-            //     continue;          
-            // }      
-            /* decide if need add to map */
-            
-            if (!Nearest_Points[i].empty())
-            {
-                const PointVector &points_near = Nearest_Points[i];
-                bool need_add = true;
-                // BoxPointType Box_of_Point;
-                PointType downsample_result, mid_point; 
-                mid_point.x = floor(feats_down_world->points[i].x/filter_size_map_min)*filter_size_map_min + 0.5 * filter_size_map_min;
-                mid_point.y = floor(feats_down_world->points[i].y/filter_size_map_min)*filter_size_map_min + 0.5 * filter_size_map_min;
-                mid_point.z = floor(feats_down_world->points[i].z/filter_size_map_min)*filter_size_map_min + 0.5 * filter_size_map_min;
-                /* If the nearest points is definitely outside the downsample box */
-                if (fabs(points_near[0].x - mid_point.x) > 0.5 * filter_size_map_min || fabs(points_near[0].y - mid_point.y) > 0.5 * filter_size_map_min || fabs(points_near[0].z - mid_point.z) > 0.5 * filter_size_map_min){
-                    PointNoNeedDownsample.emplace_back(feats_down_world->points[i]);
-                    continue;
+            Eigen::Vector3f center =
+                ((point_world.getVector3fMap() / filter_size_map_min).array().floor() + 0.5) * filter_size_map_min;
+            bool need_add = true;
+            for (int readd_i = 0; readd_i < points_near.size(); readd_i++) {
+                Eigen::Vector3f dis_2_center = points_near[readd_i].getVector3fMap() - center;
+                if (fabs(dis_2_center.x()) < 0.5 * filter_size_map_min &&
+                    fabs(dis_2_center.y()) < 0.5 * filter_size_map_min &&
+                    fabs(dis_2_center.z()) < 0.5 * filter_size_map_min) {
+                    need_add = false;
                 }
-                /* Check if there is a point already in the downsample box and closer to the center point */
-                // float dist  = calc_dist<float>(feats_down_world->points[i],mid_point);
-                // for (int readd_i = 0; readd_i < NUM_MATCH_POINTS; readd_i ++)
-                // {
-                //     if (points_near.size() < NUM_MATCH_POINTS) break;
-                //     /* Those points which are outside the downsample box should not be considered. */
-                //     // if (fabs(points_near[readd_i].x - mid_point.x) > 0.5 * filter_size_map_min || fabs(points_near[readd_i].y - mid_point.y) > 0.5 * filter_size_map_min || fabs(points_near[readd_i].z - mid_point.z) > 0.5 * filter_size_map_min) {
-                //     //     continue;                    
-                //     // }
-                //     if (calc_dist<float>(points_near[readd_i], mid_point) < dist)
-                //     {
-                //         need_add = false;
-                //         break;
-                //     }
-                // }
-                // if (need_add) PointToAdd.emplace_back(feats_down_world->points[i]);
             }
-            else
-            {
-                // PointToAdd.emplace_back(feats_down_world->points[i]);
-                PointNoNeedDownsample.emplace_back(feats_down_world->points[i]);
+            if (need_add) {
+                points_to_add.emplace_back(point_world);
             }
+        } else {
+            points_to_add.emplace_back(point_world);
         }
-    // int add_point_size = ikdtree.Add_Points(PointToAdd, true);
-    ikdtree.Add_Points(PointNoNeedDownsample, false);
+    }
+    ivox_->AddPoints(points_to_add);
 }
 
-void publish_init_kdtree(const ros::Publisher & pubLaserCloudFullRes)
+void publish_init_map(const ros::Publisher & pubLaserCloudFullRes)
 {
-    int size_init_ikdtree = ikdtree.size();
-    PointCloudXYZI::Ptr   laserCloudInit(new PointCloudXYZI(size_init_ikdtree, 1));
+    int size_init_map = init_feats_world->size();
 
     sensor_msgs::PointCloud2 laserCloudmsg;
-    PointVector ().swap(ikdtree.PCL_Storage);
-    ikdtree.flatten(ikdtree.Root_Node, ikdtree.PCL_Storage, NOT_RECORD);
                 
-    laserCloudInit->points = ikdtree.PCL_Storage;
-    pcl::toROSMsg(*laserCloudInit, laserCloudmsg);
+    pcl::toROSMsg(*init_feats_world, laserCloudmsg);
         
     laserCloudmsg.header.stamp = ros::Time().fromSec(lidar_end_time);
     laserCloudmsg.header.frame_id = "camera_init";
     pubLaserCloudFullRes.publish(laserCloudmsg);
-
 }
 
 PointCloudXYZI::Ptr pcl_wait_pub(new PointCloudXYZI(500000, 1));
@@ -427,6 +327,7 @@ int main(int argc, char** argv)
     spinner.start();
     readParameters(nh);
     cout<<"lidar_type: "<<lidar_type<<endl;
+    ivox_ = std::make_shared<IVoxType>(ivox_options_);
     
     path.header.stamp    = ros::Time().fromSec(lidar_end_time);
     path.header.frame_id ="camera_init";
@@ -434,10 +335,6 @@ int main(int argc, char** argv)
     /*** variables definition for counting ***/
     int frame_num = 0;
     double aver_time_consu = 0, aver_time_icp = 0, aver_time_match = 0, aver_time_incre = 0, aver_time_solve = 0, aver_time_propag = 0;
-    
-    /*** initialize variables ***/
-    double FOV_DEG = (fov_deg + 10.0) > 179.9 ? 179.9 : (fov_deg + 10.0);
-    double HALF_FOV_COS = cos((FOV_DEG) * 0.5 * PI_M / 180.0);
 
     memset(point_selected_surf, true, sizeof(point_selected_surf));
     downSizeFilterSurf.setLeafSize(filter_size_surf_min, filter_size_surf_min, filter_size_surf_min);
@@ -600,9 +497,7 @@ int main(int argc, char** argv)
                 }
                 
                 {
-                    // ikdtree = KD_TREE<PointType>();
-                    delete ikdtree.Root_Node;
-                    ikdtree.Root_Node = nullptr;                
+                    ivox_.reset(new IVoxType(ivox_options_));
                 }
                 flg_reset = false;
             }
@@ -664,8 +559,6 @@ int main(int argc, char** argv)
             update_time = 0;
             t0 = omp_get_wtime();
             
-            /*** Segment the map in lidar FOV ***/
-            lasermap_fov_segment();
             /*** downsample the feature points in a scan ***/
             t1 = omp_get_wtime();
             p_imu->Process(Measures, feats_undistort);
@@ -706,14 +599,9 @@ int main(int argc, char** argv)
                 }
                 continue;
             }
-            /*** initialize the map kdtree ***/
+            /*** initialize the map ***/
             if(!init_map && !nolidar && !lose_lid)
             {
-                if(ikdtree.Root_Node == nullptr) //
-                // if(feats_down_size > 5)
-                {
-                    ikdtree.set_downsample_param(filter_size_map_min);
-                }
                 feats_down_world->resize(feats_undistort->size());
                 for(int i = 0; i < feats_undistort->size(); i++)
                 {
@@ -726,7 +614,6 @@ int main(int argc, char** argv)
                         pointBodyToWorld(&(feats_undistort->points[i]), &(feats_down_world->points[i]));
                     }
                 }
-
                 for (size_t i = 0; i < feats_down_world->size(); i++) 
                 {
                     init_feats_world->points.emplace_back(feats_down_world->points[i]);
@@ -734,11 +621,11 @@ int main(int argc, char** argv)
                 if(init_feats_world->size() < init_map_size) 
                 {init_map = false;}
                 else
-                {
-                    ikdtree.Build(init_feats_world->points); 
+                {   
+                    ivox_->AddPoints(init_feats_world->points);
+                    publish_init_map(pubLaserCloudMap); //(pubLaserCloudFullRes);
                     init_feats_world.reset(new PointCloudXYZI());
                     init_map = true;
-                    publish_init_kdtree(pubLaserCloudMap); //(pubLaserCloudFullRes);
                 }
                 continue;
             }
@@ -752,7 +639,7 @@ int main(int argc, char** argv)
             {
                 LI_Init_update();
                 /*** add the feature points to map kdtree ***/
-                map_incremental();
+                MapIncremental();
 
                 // if (scan_pub_en || pcd_save_en)      publish_frame_world(pubLaserCloudFullRes);
                 // if (scan_pub_en && scan_body_pub_en) publish_frame_body(pubLaserCloudFullRes_body);
@@ -1914,12 +1801,12 @@ int main(int argc, char** argv)
                 // publish_odometry(pubOdomAftMapped);
             }
 
-            /*** add the feature points to map kdtree ***/
+            /*** add the feature points to map ***/
             t3 = omp_get_wtime();
             
             if(feats_down_size > 4)
             {
-                map_incremental();
+                MapIncremental();
             }
 
             t5 = omp_get_wtime();
