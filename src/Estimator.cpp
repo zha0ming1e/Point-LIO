@@ -163,12 +163,22 @@ void h_model_input(state_input &s, esekfom::dyn_share_modified<double> &ekfom_da
 	ekfom_data.h_x = Eigen::MatrixXd::Zero(effect_num_k, 6); //12);
 	ekfom_data.z.resize(effect_num_k);
 	int m = 0;
+	// V3D last_norm_vec = V3D::Zero();
+	// if (!p_gnss->norm_vec_holder.empty()) 
+	// {
+	// 	last_norm_vec = p_gnss->norm_vec_holder.back();
+	// }
 	for (int j = 0; j < time_seq[k]; j++)
 	{
+		// ekfom_data.converge = false;
 		if(point_selected_surf[idx+j+1])
 		{
 			V3D norm_vec(normvec->points[j].x, normvec->points[j].y, normvec->points[j].z);
 			p_gnss->norm_vec_holder.push_back(norm_vec);
+			// if (fabs(last_norm_vec.transpose() * norm_vec) > 0.9)
+			// {
+			// 	ekfom_data.converge = true;
+			// }
 			// if (extrinsic_est_en)
 			// {
 			// 	V3D p_body = pbody_list[idx+j+1];
@@ -189,6 +199,11 @@ void h_model_input(state_input &s, esekfom::dyn_share_modified<double> &ekfom_da
 				ekfom_data.h_x.block<1, 6>(m, 0) << norm_vec(0), norm_vec(1), norm_vec(2), VEC_FROM_ARRAY(A); //, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
 			}
 			ekfom_data.z(m) = -norm_vec(0) * feats_down_world->points[idx+j+1].x -norm_vec(1) * feats_down_world->points[idx+j+1].y -norm_vec(2) * feats_down_world->points[idx+j+1].z-normvec->points[j].intensity;
+			// if (ekfom_data.converge)
+			// {
+			// 	ekfom_data.h_x.block<1, 6>(m, 0) *= 2;
+			// 	ekfom_data.z(m) *= 2;
+			// }
 			m++;
 		}
 	}
@@ -250,12 +265,22 @@ void h_model_output(state_output &s, esekfom::dyn_share_modified<double> &ekfom_
 	ekfom_data.h_x = Eigen::MatrixXd::Zero(effect_num_k, 6); // 12);
 	ekfom_data.z.resize(effect_num_k);
 	int m = 0;
+	// V3D last_norm_vec = V3D::Zero();
+	// if (!p_gnss->norm_vec_holder.empty()) 
+	// {
+	// 	last_norm_vec = p_gnss->norm_vec_holder.back();
+	// }
 	for (int j = 0; j < time_seq[k]; j++)
 	{
+		// ekfom_data.converge = false;
 		if(point_selected_surf[idx+j+1])
 		{
 			V3D norm_vec(normvec->points[j].x, normvec->points[j].y, normvec->points[j].z);
 			p_gnss->norm_vec_holder.push_back(norm_vec);
+			// if (fabs(last_norm_vec.transpose() * norm_vec) > 0.9)
+			// {
+			// 	ekfom_data.converge = true;
+			// }
 			// if (extrinsic_est_en)
 			// {
 			// 	V3D p_body = pbody_list[idx+j+1];
@@ -276,6 +301,11 @@ void h_model_output(state_output &s, esekfom::dyn_share_modified<double> &ekfom_
 				ekfom_data.h_x.block<1, 6>(m, 0) << norm_vec(0), norm_vec(1), norm_vec(2), VEC_FROM_ARRAY(A); //, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
 			}
 			ekfom_data.z(m) = -norm_vec(0) * feats_down_world->points[idx+j+1].x -norm_vec(1) * feats_down_world->points[idx+j+1].y -norm_vec(2) * feats_down_world->points[idx+j+1].z-normvec->points[j].intensity;
+			// if (ekfom_data.converge)
+			// {
+			// 	ekfom_data.h_x.block<1, 6>(m, 0) *= 2;
+			// 	ekfom_data.z(m) *= 2;
+			// }
 			m++;
 		}
 	}
@@ -333,11 +363,12 @@ void h_model_GNSS_input(state_input &s, esekfom::dyn_share_modified<double> &ekf
 	// Eigen::Vector3d res_r;
 	// p_gnss->state_.rot.boxminus(res_r, s.rot);
 	ekfom_data.h_GNSS.setIdentity();
+	// ekfom_data.h_GNSS *= p_gnss->odo_weight;
 	ekfom_data.z_GNSS.setZero();
 	// ekfom_data.h_GNSS.block<3, 3>(3, 3) = Eigen::Matrix3d::Zero(); // Jacob_right_inv<double>(res_r); // 
 	// ekfom_data.h_GNSS.block<3, 3>(6, 6) = Eigen::Matrix3d::Zero(); // 
 	// ekfom_data.z_GNSS.block<3, 1>(3, 0) = res_r;
-	ekfom_data.z_GNSS.block<3, 1>(0, 0) = p_gnss->state_.pos - s.pos;
+	ekfom_data.z_GNSS.block<3, 1>(0, 0) = (p_gnss->state_.pos - s.pos); // p_gnss->odo_weight * 
 	// ekfom_data.z_GNSS.block<3, 1>(6, 0) = p_gnss->state_.vel - s.vel;
 	ekfom_data.M_Noise = gnss_ekf_noise;
 }
@@ -347,11 +378,12 @@ void h_model_GNSS_output(state_output &s, esekfom::dyn_share_modified<double> &e
 	// Eigen::Vector3d res_r;
 	// p_gnss->state_const_.rot.boxminus(res_r, s.rot);
 	ekfom_data.h_GNSS.setIdentity();
+	// ekfom_data.h_GNSS *= p_gnss->odo_weight;
 	ekfom_data.z_GNSS.setZero();
 	// ekfom_data.h_GNSS.block<3, 3>(3, 3) = Eigen::Matrix3d::Zero(); // Jacob_right_inv<double>(res_r); // 
 	// ekfom_data.h_GNSS.block<3, 3>(6, 6) = Eigen::Matrix3d::Zero(); // Jacob_right_inv<double>(res_r); // 
 	// ekfom_data.z_GNSS.block<3, 1>(3, 0) = res_r;
-	ekfom_data.z_GNSS.block<3, 1>(0, 0) = p_gnss->state_const_.pos - s.pos;
+	ekfom_data.z_GNSS.block<3, 1>(0, 0) = (p_gnss->state_const_.pos - s.pos); // p_gnss->odo_weight * 
 	// ekfom_data.z_GNSS.block<3, 1>(6, 0) = p_gnss->state_const_.vel - s.vel;
 	ekfom_data.M_Noise = gnss_ekf_noise;
 }
@@ -412,7 +444,7 @@ void LI_Init_update()
 
 			if (nearest_search_en) {
 				/** Find the closest surfaces in the map **/
-				ikdtree.Nearest_Search(point_world, NUM_MATCH_POINTS, points_near, pointSearchSqDis, 2.236);
+				ikdtree.Nearest_Search(point_world, NUM_MATCH_POINTS, points_near, pointSearchSqDis, 5);
 				if (points_near.size() < NUM_MATCH_POINTS)
 					point_selected_surf[i] = false;
 				else

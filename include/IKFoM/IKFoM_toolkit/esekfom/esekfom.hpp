@@ -226,7 +226,7 @@ public:
 			// state x_before = x_;
 
 			x_.boxplus(dx_);
-			dyn_share.converge = true;
+			// dyn_share.converge = true;
 			
 			// L_ = P_;
 			// Matrix<scalar_type, 3, 3> res_temp_SO3;
@@ -285,6 +285,7 @@ public:
 			// 	}
 			// }
 			// if(n > dof_Measurement)
+			// if (dyn_share.converge)
 			{
 				P_ = P_ - K_*h_x*P_. template block<6, n>(0, 0);
 			}
@@ -352,14 +353,14 @@ public:
 			Matrix<double, n, 3> KH;
 			
 			{
-				PHT = P_.template block<n, 3>(0, 0); // * Hsub_T;
-				HPHT = PHT.template block<3, 3>(0, 0); // dyn_share.h_GNSS * 
+				PHT = P_.template block<n, 3>(0, 0) * Hsub_T;
+				HPHT = dyn_share.h_GNSS * PHT.template block<3, 3>(0, 0); // 
 				for (int m_ = 0; m_ < 3; m_++)
 				{
 					HPHT(m_,m_) += dyn_share.M_Noise;
 				}
 				K = PHT * HPHT.inverse();
-				KH = K; // * dyn_share.h_GNSS;
+				KH = K * dyn_share.h_GNSS;
 			}
 			
                                     

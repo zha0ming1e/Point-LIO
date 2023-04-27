@@ -1066,6 +1066,7 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
       p_assign->gtSAMgraph.add(glio::GnssLioHardFactor(R(frame_num), A(frame_num), ba, bg, rot, sqrt_lidar, p_assign->odomNoise)); //LioNoise)); // odomNoiseIMU));
       factor_id_cur.push_back(id_accumulate);
       id_accumulate += 1;
+      // odo_weight = 3.0;
       // p_assign->gtSAMgraph.add(glio::GnssLioFactor(R(frame_num-1), A(frame_num-1), R(frame_num), A(frame_num), 1.0, rel_rot, rel_pos, rel_vel,
                       // state_gravity, delta_t, pre_integration->covariance, p_assign->odomNoise)); // odomNoiseIMU)); // LioNoise)); // 
       // p_assign->factor_id_frame[frame_num-1-frame_delete].push_back(id_accumulate);
@@ -1097,6 +1098,7 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
       p_assign->gtSAMgraph.add(glio::GnssLioHardFactor(R(frame_num), A(frame_num), ba, bg, rot, sqrt_lidar, p_assign->margposNoise)); //LioNoise)); // odomNoiseIMU));
       factor_id_cur.push_back(id_accumulate);
       id_accumulate += 1;
+      // odo_weight = 2.0;
     }
     // gtSAMgraph.add(glio::GnssLioFactorNolidar(R(frame_num-1), F(frame_num-1), R(frame_num), F(frame_num), rel_rot, rel_pos, rel_v, 
     //               state_.gravity, delta_t, state_.ba, state_.bg, pre_integration, odomNoiseIMU));

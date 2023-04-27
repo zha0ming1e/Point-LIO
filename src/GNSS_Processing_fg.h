@@ -88,7 +88,7 @@ class GNSSProcess
   double relative_sqrt_info = 10;
   double cp_weight = 1.0;
   Eigen::Matrix<double, 9, 9> sqrt_lidar;
-  // double odo_weight = 1.0;
+  // double odo_weight = 2.0;
   IntegrationBase* pre_integration = new IntegrationBase{Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero()};
   GNSSAssignment* p_assign = new GNSSAssignment();
   private:
