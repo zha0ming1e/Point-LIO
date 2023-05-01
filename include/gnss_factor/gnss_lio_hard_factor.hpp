@@ -30,7 +30,7 @@ class GnssLioHardFactor : public gtsam::NoiseModelFactor2<gtsam::Rot3, gtsam::Ve
             {
                 (*H1) = gtsam::Matrix::Zero(9, 3);
                 (*H1).block<3, 3>(3, 0) = Jacob_right_inv<double>(res_r); // gtsam::Matrix::Identity(4, 4);
-                // (*H1) = sqrt_lidar * (*H1);
+                (*H1) = sqrt_lidar * (*H1);
             }
             if (H2)
             {
@@ -38,13 +38,13 @@ class GnssLioHardFactor : public gtsam::NoiseModelFactor2<gtsam::Rot3, gtsam::Ve
                 (*H2).block<3, 3>(0, 0) = gtsam::Matrix::Identity(3, 3);
                 (*H2).block<3, 3>(6, 3) = gtsam::Matrix::Identity(3, 3);
                 // (*H2).block<6, 6>(9, 6) = gtsam::Matrix::Zero(6, 6);
-                // (*H2) = sqrt_lidar * (*H2);
+                (*H2) = sqrt_lidar * (*H2);
             }
             gtsam::Vector residual(9);
             residual.segment<3>(3) = res_r;
             residual.segment<3>(0) = pos_vel.block<3, 1>(0, 0) - pos_lio;
             residual.segment<3>(6) = pos_vel.block<3, 1>(3, 0) - vel_lio;
-            // residual = sqrt_lidar * residual;
+            residual = sqrt_lidar * residual;
             return residual;
         }
     private:

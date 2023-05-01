@@ -386,7 +386,7 @@ int main(int argc, char** argv)
 
     kf_input.init_dyn_share_modified_2h(get_f_input, df_dx_input, h_model_input, h_model_GNSS_input);
     kf_output.init_dyn_share_modified_3h(get_f_output, df_dx_output, h_model_output, h_model_IMU_output, h_model_GNSS_output);
-    Eigen::Matrix<double, 18, 18> P_init = MD(18, 18)::Identity() * 0.01;
+    Eigen::Matrix<double, 18, 18> P_init = MD(18, 18)::Identity() * 0.1;
     P_init.block<3, 3>(15, 15) = MD(3,3)::Identity() * 0.0001;
     P_init.block<6, 6>(9, 9) = MD(6,6)::Identity() * 0.001;
     // P_init.block<6, 6>(6, 6) = MD(6,6)::Identity() * 0.0001;
@@ -799,7 +799,8 @@ int main(int argc, char** argv)
                                         time_predict_last_const = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                                         time_update_last = time_predict_last_const;
                                         p_gnss->processGNSS(gnss_cur, kf_output.x_);
-                                        // p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 9, 9>>(kf_output.P_.block<9, 9>(0, 0).inverse()).matrixL().transpose();
+                                        p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 9, 9>>(kf_output.P_.block<9, 9>(0, 0).inverse()).matrixL().transpose();
+                                        p_gnss->sqrt_lidar *= 0.01;
                                         update_gnss = p_gnss->Evaluate(kf_output.x_);
                                         if (!p_gnss->gnss_ready)
                                         {
@@ -927,7 +928,8 @@ int main(int argc, char** argv)
                                 time_predict_last_const = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                                 time_update_last = time_predict_last_const;
                                 p_gnss->processGNSS(gnss_cur, kf_output.x_);
-                                // p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 9, 9>>(kf_output.P_.block<9, 9>(0, 0).inverse()).matrixL().transpose();
+                                p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 9, 9>>(kf_output.P_.block<9, 9>(0, 0).inverse()).matrixL().transpose();
+                                p_gnss->sqrt_lidar *= 0.01;
                                 update_gnss = p_gnss->Evaluate(kf_output.x_);
                                 if (!p_gnss->gnss_ready)
                                 {
@@ -1163,7 +1165,8 @@ int main(int argc, char** argv)
                                 // change to state_const.omg and state_const.acc? 
                                 time_predict_last_const = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                                 p_gnss->processGNSS(gnss_cur, kf_output.x_);
-                                // p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 9, 9>>(kf_output.P_.block<9, 9>(0, 0).inverse()).matrixL().transpose();
+                                p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 9, 9>>(kf_output.P_.block<9, 9>(0, 0).inverse()).matrixL().transpose();
+                                p_gnss->sqrt_lidar *= 0.01;
                                 update_gnss = p_gnss->Evaluate(kf_output.x_); 
                                 if (!p_gnss->gnss_ready)
                                 {
@@ -1340,7 +1343,8 @@ int main(int argc, char** argv)
                                     // p_gnss->processIMU(dt, input_in.acc, input_in.gyro);
                                     t_last = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                                     p_gnss->processGNSS(gnss_cur, kf_input.x_, input_in.gyro);
-                                    // p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 9, 9>>(kf_input.P_.block<9, 9>(0, 0).inverse()).matrixL().transpose();
+                                    p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 9, 9>>(kf_input.P_.block<9, 9>(0, 0).inverse()).matrixL().transpose();
+                                    p_gnss->sqrt_lidar *= 0.01;
                                     update_gnss = p_gnss->Evaluate(kf_input.x_, input_in.gyro);
                                     if (!p_gnss->gnss_ready)
                                     {
@@ -1452,7 +1456,8 @@ int main(int argc, char** argv)
                             // p_gnss->processIMU(dt, input_in.acc, input_in.gyro);
                             t_last = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                             p_gnss->processGNSS(gnss_cur, kf_input.x_, input_in.gyro);
-                            // p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 9, 9>>(kf_input.P_.block<9, 9>(0, 0).inverse()).matrixL().transpose();
+                            p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 9, 9>>(kf_input.P_.block<9, 9>(0, 0).inverse()).matrixL().transpose();
+                            p_gnss->sqrt_lidar *= 0.01;
                             update_gnss = p_gnss->Evaluate(kf_input.x_, input_in.gyro);
                             if (!p_gnss->gnss_ready)
                             {
@@ -1685,7 +1690,8 @@ int main(int argc, char** argv)
                                 p_gnss->pre_integration->push_back(dt, input_in.acc, input_in.gyro);
                                 t_last = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                                 p_gnss->processGNSS(gnss_cur, kf_input.x_, input_in.gyro);
-                                // p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 9, 9>>(kf_input.P_.block<9, 9>(0, 0).inverse()).matrixL().transpose();
+                                p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 9, 9>>(kf_input.P_.block<9, 9>(0, 0).inverse()).matrixL().transpose();
+                                p_gnss->sqrt_lidar *= 0.01;
                                 update_gnss = p_gnss->Evaluate(kf_input.x_, input_in.gyro);
                                 if (!p_gnss->gnss_ready)
                                 {

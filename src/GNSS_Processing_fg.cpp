@@ -627,6 +627,8 @@ bool GNSSProcess::Evaluate(state_input &state, Eigen::Vector3d &omg)
     frame_num ++;
     if (!nolidar) state_last = state;
     runISAM2opt();
+    // auto ekfPosNoise = p_assign->isam.marginalCovariance(A(frame_num-1));
+    // odo_weight = 60 / (ekfPosNoise(0,0) + ekfPosNoise(1,1) + ekfPosNoise(2,2));
   }
   else
   {
@@ -747,6 +749,8 @@ bool GNSSProcess::Evaluate(state_output &state)
     frame_num ++;
     if (!nolidar) state_const_last = state;
     runISAM2opt();
+    // auto ekfPosNoise = p_assign->isam.marginalCovariance(A(frame_num-1));
+    // odo_weight = 60 / (ekfPosNoise(0,0) + ekfPosNoise(1,1) + ekfPosNoise(2,2));
   }
   else
   {
@@ -1099,6 +1103,14 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
       factor_id_cur.push_back(id_accumulate);
       id_accumulate += 1;
       // odo_weight = 2.0;
+    }
+    if ((sqrt_lidar(0, 0) + sqrt_lidar(1, 1) + sqrt_lidar(2, 2)) / 3 > 2.5)
+    {
+      odo_weight = 2.0;
+    }
+    else
+    {
+      odo_weight = 1.0;
     }
     // gtSAMgraph.add(glio::GnssLioFactorNolidar(R(frame_num-1), F(frame_num-1), R(frame_num), F(frame_num), rel_rot, rel_pos, rel_v, 
     //               state_.gravity, delta_t, state_.ba, state_.bg, pre_integration, odomNoiseIMU));
