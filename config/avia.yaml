@@ -84,7 +84,7 @@ gnss:
     b_acc_noise: 0.1 # important
     b_omg_noise: 0.1 # 1/dt need to be modelled more accurately 
     ddt_noise: 0.1 # 0.01
-    odo_noise: 10
+    odo_noise: 15
     psr_dopp_noise: 0.1
     cp_noise: 0.001
     gnss_ekf_noise: 0.001

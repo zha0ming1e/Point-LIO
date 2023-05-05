@@ -1062,12 +1062,19 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
   id_accumulate += 2;
   if (!nolidar)
   {
+    bool no_weight = false;
     // Eigen::Matrix<double, 15, 15> state_cov = Eigen::Matrix<double, 15, 15>::Identity();
     // state_cov.block<9, 9>(0, 0) = state.cov.block<9, 9>(0, 0) * 100;
     // gtsam::noiseModel::Gaussian::shared_ptr LioNoise = gtsam::noiseModel::Gaussian::Covariance(state_cov); 
+    double weight_check = (sqrt_lidar(0, 0) + sqrt_lidar(1, 1) + sqrt_lidar(2, 2)) / 3;
+    if (weight_check < 1.0)
+    {
+      // sqrt_lidar.setIdentity();
+      no_weight = true;
+    }
     if (invalid_lidar)
     {
-      p_assign->gtSAMgraph.add(glio::GnssLioHardFactor(R(frame_num), A(frame_num), ba, bg, rot, sqrt_lidar, p_assign->odomNoise)); //LioNoise)); // odomNoiseIMU));
+      p_assign->gtSAMgraph.add(glio::GnssLioHardFactor(R(frame_num), A(frame_num), ba, bg, rot, sqrt_lidar, no_weight, p_assign->odomNoise)); //LioNoise)); // odomNoiseIMU));
       factor_id_cur.push_back(id_accumulate);
       id_accumulate += 1;
       // odo_weight = 3.0;
@@ -1099,12 +1106,12 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
       // Eigen::Matrix<double, 15, 15> state_cov = Eigen::Matrix<double, 15, 15>::Identity(); 
       // state_cov.block<9, 9>(0, 0) = state.cov.block<9, 9>(0, 0) * 1000;
       // gtsam::noiseModel::Gaussian::shared_ptr LioNoise = gtsam::noiseModel::Gaussian::Covariance(state_cov);
-      p_assign->gtSAMgraph.add(glio::GnssLioHardFactor(R(frame_num), A(frame_num), ba, bg, rot, sqrt_lidar, p_assign->margposNoise)); //LioNoise)); // odomNoiseIMU));
+      p_assign->gtSAMgraph.add(glio::GnssLioHardFactor(R(frame_num), A(frame_num), ba, bg, rot, sqrt_lidar, no_weight, p_assign->margposNoise)); //LioNoise)); // odomNoiseIMU));
       factor_id_cur.push_back(id_accumulate);
       id_accumulate += 1;
       // odo_weight = 2.0;
     }
-    if ((sqrt_lidar(0, 0) + sqrt_lidar(1, 1) + sqrt_lidar(2, 2)) / 3 > 2.5)
+    if (weight_check > 3.0)
     {
       odo_weight = 2.0;
     }
