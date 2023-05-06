@@ -840,7 +840,7 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
     Reset();
     return false;
   }
-  if (nolidar_cur) nolidar_cur = false;
+  if (nolidar_cur && !nolidar) nolidar_cur = false;
   rcv_ddt = p_assign->isamCurrentEstimate.at<gtsam::Vector1>(C(frame_num-1))[0];
   rcv_dt[0] = p_assign->isamCurrentEstimate.at<gtsam::Vector4>(B(frame_num-1))[0] + rcv_ddt * delta_t;
   rcv_dt[1] = p_assign->isamCurrentEstimate.at<gtsam::Vector4>(B(frame_num-1))[1] + rcv_ddt * delta_t;

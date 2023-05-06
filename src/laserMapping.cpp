@@ -1165,8 +1165,11 @@ int main(int argc, char** argv)
                                 // change to state_const.omg and state_const.acc? 
                                 time_predict_last_const = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                                 p_gnss->processGNSS(gnss_cur, kf_output.x_);
-                                p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 9, 9>>(kf_output.P_.block<9, 9>(0, 0).inverse()).matrixL().transpose();
-                                p_gnss->sqrt_lidar *= 0.01;
+                                if (!nolidar)
+                                {
+                                    p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 9, 9>>(kf_output.P_.block<9, 9>(0, 0).inverse()).matrixL().transpose();
+                                    p_gnss->sqrt_lidar *= 0.01;
+                                }
                                 update_gnss = p_gnss->Evaluate(kf_output.x_); 
                                 if (!p_gnss->gnss_ready)
                                 {
@@ -1690,8 +1693,11 @@ int main(int argc, char** argv)
                                 p_gnss->pre_integration->push_back(dt, input_in.acc, input_in.gyro);
                                 t_last = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                                 p_gnss->processGNSS(gnss_cur, kf_input.x_, input_in.gyro);
-                                p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 9, 9>>(kf_input.P_.block<9, 9>(0, 0).inverse()).matrixL().transpose();
-                                p_gnss->sqrt_lidar *= 0.01;
+                                if (!nolidar)
+                                {
+                                    p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 9, 9>>(kf_input.P_.block<9, 9>(0, 0).inverse()).matrixL().transpose();
+                                    p_gnss->sqrt_lidar *= 0.01;
+                                }
                                 update_gnss = p_gnss->Evaluate(kf_input.x_, input_in.gyro);
                                 if (!p_gnss->gnss_ready)
                                 {
