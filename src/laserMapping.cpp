@@ -1686,10 +1686,10 @@ int main(int argc, char** argv)
                             {
                                 if (dt_cov > 0.0)
                                 {
-                                    kf_input.predict(dt_cov, Q_input, input_in, false, true);
+                                    // kf_input.predict(dt_cov, Q_input, input_in, false, true);
                                     time_update_last = time2sec(gnss_cur[0]->time) - gnss_local_time_diff; //time_current;
                                 }
-                                kf_input.predict(dt, Q_input, input_in, true, false);
+                                // kf_input.predict(dt, Q_input, input_in, true, false);
                                 p_gnss->pre_integration->push_back(dt, input_in.acc, input_in.gyro);
                                 t_last = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                                 p_gnss->processGNSS(gnss_cur, kf_input.x_, input_in.gyro);
@@ -1722,10 +1722,10 @@ int main(int argc, char** argv)
                             {
                                 if (dt_cov > 0.0)
                                 {
-                                    kf_input.predict(dt_cov, Q_input, input_in, false, true);
+                                    // kf_input.predict(dt_cov, Q_input, input_in, false, true);
                                     time_update_last = time2sec(gnss_cur[0]->time) - gnss_local_time_diff; //time_current;
                                 }
-                                kf_input.predict(dt, Q_input, input_in, true, false);
+                                // kf_input.predict(dt, Q_input, input_in, true, false);
                                 t_last = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                                 p_gnss->processGNSS(gnss_cur, kf_input.x_, input_in.gyro);
                                 if (p_gnss->gnss_ready)
@@ -1765,10 +1765,10 @@ int main(int argc, char** argv)
                         double dt_cov = time_current - time_update_last;
                         if (dt_cov > 0.0)
                         {        
-                            kf_input.predict(dt_cov, Q_input, input_in, false, true);
+                            // kf_input.predict(dt_cov, Q_input, input_in, false, true);
                             time_update_last = imu_next.header.stamp.toSec(); //time_current;
                         }
-                        kf_input.predict(dt, Q_input, input_in, true, false);
+                        // kf_input.predict(dt, Q_input, input_in, true, false);
 
                         t_last = imu_next.header.stamp.toSec();
                     

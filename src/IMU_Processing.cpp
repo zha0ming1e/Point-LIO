@@ -54,7 +54,7 @@ void ImuProcess::Reset()
     LI_init_done = false;
     state_LI_Init = state_input();
     state_cov.setIdentity();
-    state_cov.block<3, 3>(9, 9) = Eigen::Matrix<double, 3, 3>::Identity() * 0.00001;
+    state_cov.block<3, 3>(9, 9) = Eigen::Matrix<double, 3, 3>::Identity() * 0.0001;
   }
   time_last_scan = 0.0;
 }
