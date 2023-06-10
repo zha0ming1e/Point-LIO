@@ -23,21 +23,21 @@
 #include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
 #include <gtsam/nonlinear/ISAM2.h>
 
-#include <gnss_factor/gnss_cp_factor.hpp>
-#include <gnss_factor/gnss_cp_factor_pos.hpp>
-#include <gnss_factor/gnss_lio_hard_factor.hpp>
-#include <gnss_factor/gnss_lio_gravity_factor.hpp>
+#include <gnss_factor/gnss_cp_factor_nor.hpp>
+// #include <gnss_factor/gnss_cp_factor_pos.hpp>
+#include <gnss_factor/gnss_lio_hard_factor_nor.hpp>
+// #include <gnss_factor/gnss_lio_gravity_factor.hpp>
 #include <gnss_factor/gnss_cp_factor_nolidar.hpp>
-#include <gnss_factor/gnss_cp_factor_nolidar_pos.hpp>
+// #include <gnss_factor/gnss_cp_factor_nolidar_pos.hpp>
 #include <gnss_factor/gnss_ddt_smooth_factor.hpp>
 #include <gnss_factor/gnss_dt_ddt_factor.hpp>
-#include <gnss_factor/gnss_lio_factor.hpp>
+// #include <gnss_factor/gnss_lio_factor.hpp>
 #include <gnss_factor/gnss_lio_factor_nolidar.hpp>
 #include <gnss_factor/gnss_prior_factor.hpp>
-#include <gnss_factor/gnss_psr_dopp_factor.hpp>
-#include <gnss_factor/gnss_psr_dopp_factor_pos.hpp>
+#include <gnss_factor/gnss_psr_dopp_factor_nor.hpp>
+// #include <gnss_factor/gnss_psr_dopp_factor_pos.hpp>
 #include <gnss_factor/gnss_psr_dopp_factor_nolidar.hpp>
-#include <gnss_factor/gnss_psr_dopp_factor_nolidar_pos.hpp>
+// #include <gnss_factor/gnss_psr_dopp_factor_nolidar_pos.hpp>
 
 using namespace gnss_comm;
 
@@ -52,6 +52,18 @@ using gtsam::symbol_shorthand::A; // pos, vel
 // using gtsam::symbol_shorthand::G; // ext_R
 // using gtsam::symbol_shorthand::Y; // local enu (yaw)
 // using gtsam::symbol_shorthand::A; // anchor point (anc) total = 18 dimensions
+
+struct sat_first
+{
+    double timecur;
+    Eigen::Vector3d RTex;
+    int frame_num;
+
+    bool operator <(const sat_first &s) const
+    {
+        return (timecur < s.timecur);
+    }
+};
 
 class GNSSAssignment
 {

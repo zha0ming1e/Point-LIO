@@ -31,7 +31,7 @@ class GNSSProcess
   void SetInit();
   bool AddFactor(gtsam::Rot3 rel_rot_, gtsam::Point3 rel_pos_, gtsam::Vector3 rel_v_, Eigen::Vector3d state_gravity, double delta_t, double time_current,
                 Eigen::Vector3d ba, Eigen::Vector3d bg, Eigen::Vector3d omg, Eigen::Matrix3d rot);
-  std::map<std::pair<double, int>, std::map<uint32_t, double[6]>> sat2cp; // 
+  std::map<sat_first, std::map<uint32_t, double[6]>> sat2cp; // 
   std::vector<ObsPtr> gnss_meas_buf[WINDOW_SIZE+1]; //
   std::vector<EphemBasePtr> gnss_ephem_buf[WINDOW_SIZE+1]; // 
   Eigen::Matrix3d rot_window[WINDOW_SIZE+1]; //
@@ -87,7 +87,7 @@ class GNSSProcess
   state_output state_const_last;
   double relative_sqrt_info = 10;
   double cp_weight = 1.0;
-  Eigen::Matrix<double, 9, 9> sqrt_lidar;
+  Eigen::Matrix<double, 6, 6> sqrt_lidar;
   double odo_weight = 2.0;
   IntegrationBase* pre_integration = new IntegrationBase{Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero()};
   GNSSAssignment* p_assign = new GNSSAssignment();
