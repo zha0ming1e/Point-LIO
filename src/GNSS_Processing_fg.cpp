@@ -624,7 +624,7 @@ bool GNSSProcess::Evaluate(state_input &state, Eigen::Vector3d &omg)
     p_assign->initialEstimate.insert(F(frame_num), gtsam::Vector12(init_vel_bias_vector));
     p_assign->initialEstimate.insert(R(frame_num), gtsam::Rot3(state.rot)); // .normalized().toRotationMatrix()
   }              
-  rot_pos = state.rot; //.normalized().toRotationMatrix();
+  // rot_pos = state.rot; //.normalized().toRotationMatrix();
   if (AddFactor(rel_rot, rel_pos, rel_vel, state.gravity, delta_t, time_current, pos, vel, omg, rot))
   {
     frame_num ++;
@@ -749,7 +749,7 @@ bool GNSSProcess::Evaluate(state_output &state)
     p_assign->initialEstimate.insert(F(frame_num), gtsam::Vector12(init_vel_bias_vector));
     p_assign->initialEstimate.insert(R(frame_num), gtsam::Rot3(state.rot)); // .normalized().toRotationMatrix()
   }              
-  rot_pos = state.rot; //.normalized().toRotationMatrix();
+  // rot_pos = state.rot; //.normalized().toRotationMatrix();
   if (AddFactor(rel_rot, rel_pos, rel_vel, state.gravity, delta_t, time_current, pos, vel, state.omg, rot))
   {
     frame_num ++;
@@ -955,14 +955,15 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
               meas_cov = (it_old_best->second[2] * it_old_best->second[2] + it_old->second[2] * it_old->second[2]); // 
               meas_time = it->first.timecur;
               meas_index = it->first.frame_num;
+              RTex_sats << it->first.RTex[0], it->first.RTex[1], it->first.RTex[2];
               meas_svpos << it_old->second[3], it_old->second[4], it_old->second[5];
               best_svpos << it_old_best->second[3], it_old_best->second[4], it_old_best->second[5];
+              break;
             }
           }
         
           if (cp_found)
           {
-            RTex_sats << it->first.RTex[0], it->first.RTex[1], it->first.RTex[2];
             meas_sats.push_back(meas);
             meas_cov_sats.push_back(meas_cov);
             meas_time_sats.push_back(meas_time);
@@ -1083,11 +1084,18 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
     // Eigen::Matrix<double, 15, 15> state_cov = Eigen::Matrix<double, 15, 15>::Identity();
     // state_cov.block<9, 9>(0, 0) = state.cov.block<9, 9>(0, 0) * 100;
     // gtsam::noiseModel::Gaussian::shared_ptr LioNoise = gtsam::noiseModel::Gaussian::Covariance(state_cov); 
-    double weight_check = (sqrt_lidar(0, 0) + sqrt_lidar(1, 1) + sqrt_lidar(2, 2)) / 3;
-    if (weight_check < 1.0)
+    double weight_check = (sqrt_lidar(0, 0) + sqrt_lidar(1, 1) + sqrt_lidar(2, 2) + sqrt_lidar(3, 3) + sqrt_lidar(4, 4) + sqrt_lidar(5, 5)) / 6;
+    // cout << "check weight:" << weight_check << endl;
+    if (weight_check < 1)
     {
-      // sqrt_lidar.setIdentity();
-      no_weight = true;
+      // no_weight = true;
+      sqrt_lidar *= 1.0/weight_check;
+    //   // sqrt_lidar.setIdentity();
+    //   // sqrt_lidar *= 0.5;
+    }
+    else if (weight_check > 3.0)
+    {
+      sqrt_lidar *= 3.0/weight_check;
     }
     if (invalid_lidar)
     {
@@ -1130,13 +1138,17 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
       id_accumulate += 1;
       // odo_weight = 2.0;
     }
-    if (weight_check > 3.0)
+    if (frame_num < 200)
     {
-      odo_weight = 2.0;
+      odo_weight1 = 2*sqrt_lidar(0, 0); // odo_weight4 = sqrt_lidar(3, 3);
+      odo_weight2 = 2*sqrt_lidar(1, 1); // odo_weight5 = sqrt_lidar(4, 4);
+      odo_weight3 = 2*sqrt_lidar(2, 2); // odo_weight6 = sqrt_lidar(5, 5);
     }
     else
     {
-      odo_weight = 1.0;
+      odo_weight1 = 3*sqrt_lidar(0, 0); // odo_weight4 = sqrt_lidar(3, 3);
+      odo_weight2 = 3*sqrt_lidar(1, 1); // odo_weight5 = sqrt_lidar(4, 4);
+      odo_weight3 = 3*sqrt_lidar(2, 2); // odo_weight6 = sqrt_lidar(5, 5);
     }
     // gtSAMgraph.add(glio::GnssLioFactorNolidar(R(frame_num-1), F(frame_num-1), R(frame_num), F(frame_num), rel_rot, rel_pos, rel_v, 
     //               state_.gravity, delta_t, state_.ba, state_.bg, pre_integration, odomNoiseIMU));
@@ -1163,6 +1175,7 @@ bool GNSSProcess::AddFactor(gtsam::Rot3 rel_rot, gtsam::Point3 rel_pos, gtsam::V
     if (!nolidar)
     {
       Eigen::Vector3d RTex1 = rot * Tex_imu_r;
+      values[0] = RTex1[0]; values[1] = RTex1[1]; values[2] = RTex1[2]; 
       p_assign->gtSAMgraph.add(glio::GnssCpFactorNoR(E(0), P(0), A(meas_index_sats[j]), A(frame_num), invalid_lidar, values, meas_RTex_sats[j], p_assign->robustcpNoise));
       // p_assign->gtSAMgraph.add(glio::GnssCpFactor(E(0), P(0), R(meas_index_sats[j]), A(meas_index_sats[j]), R(frame_num), A(frame_num), invalid_lidar, values, p_assign->robustcpNoise));
       // Eigen::Matrix3d rot_before = p_assign->isamCurrentEstimate.at<gtsam::Rot3>(R(meas_index_sats[j])).matrix();

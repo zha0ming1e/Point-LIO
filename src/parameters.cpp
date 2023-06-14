@@ -482,3 +482,18 @@ void cout_state_to_file()
         }
     }
 }
+
+void reset_cov(Eigen::Matrix<double, 18, 18> & P_init)
+{
+    P_init = MD(18, 18)::Identity() * 0.1;
+    P_init.block<3, 3>(15, 15) = MD(3,3)::Identity() * 0.0001;
+    P_init.block<6, 6>(9, 9) = MD(6,6)::Identity() * 0.001;
+}
+
+void reset_cov_output(Eigen::Matrix<double, 24, 24> & P_init_output)
+{
+    P_init_output = MD(24, 24)::Identity() * 0.01;
+    P_init_output.block<3, 3>(15, 15) = MD(3,3)::Identity() * 0.0001;
+    // P_init_output.block<6, 6>(6, 6) = MD(6,6)::Identity() * 0.0001;
+    P_init_output.block<6, 6>(18, 18) = MD(6,6)::Identity() * 0.001;
+}

@@ -345,22 +345,40 @@ public:
 
 			// Matrix<scalar_type, 9, 1> z = dyn_share.z_GNSS;
 		
-			Matrix<double, 3, 3> Hsub_T = dyn_share.h_GNSS.transpose();
+			// Matrix<double, 6, 6> Hsub_T = dyn_share.h_GNSS.transpose();
 			Matrix<double, n, 1> solution;
 			Matrix<double, n, 3> PHT;
 			Matrix<double, n, 3> K;
 			Matrix<double, 3, 3> HPHT;
 			Matrix<double, n, 3> KH;
+			// KH.setZero();
 			
 			{
-				PHT = P_.template block<n, 3>(0, 0) * Hsub_T;
-				HPHT = dyn_share.h_GNSS * PHT.template block<3, 3>(0, 0); // 
+				PHT.template block<n, 1>(0, 0) = P_.template block<n, 1>(0, 0) * dyn_share.h_GNSS(0, 0); // Hsub_T;
+				PHT.template block<n, 1>(0, 1) = P_.template block<n, 1>(0, 1) * dyn_share.h_GNSS(1, 1); // Hsub_T;
+				PHT.template block<n, 1>(0, 2) = P_.template block<n, 1>(0, 2) * dyn_share.h_GNSS(2, 2); // Hsub_T;
+				// PHT.template block<n, 1>(0, 3) = P_.template block<n, 1>(0, 6) * dyn_share.h_GNSS(3, 3); // Hsub_T;
+				// PHT.template block<n, 1>(0, 4) = P_.template block<n, 1>(0, 7) * dyn_share.h_GNSS(4, 4); // Hsub_T;
+				// PHT.template block<n, 1>(0, 5) = P_.template block<n, 1>(0, 8) * dyn_share.h_GNSS(5, 5); // Hsub_T;
+				// HPHT = dyn_share.h_GNSS * PHT.template block<3, 3>(0, 0); // 
+				HPHT.template block<1, 3>(0, 0) = PHT.template block<1, 3>(0, 0) * dyn_share.h_GNSS(0, 0);
+				HPHT.template block<1, 3>(1, 0) = PHT.template block<1, 3>(1, 0) * dyn_share.h_GNSS(1, 1);
+				HPHT.template block<1, 3>(2, 0) = PHT.template block<1, 3>(2, 0) * dyn_share.h_GNSS(2, 2);
+				// HPHT.template block<1, 6>(3, 0) = PHT.template block<1, 6>(6, 0) * dyn_share.h_GNSS(3, 3);
+				// HPHT.template block<1, 6>(4, 0) = PHT.template block<1, 6>(7, 0) * dyn_share.h_GNSS(4, 4);
+				// HPHT.template block<1, 6>(5, 0) = PHT.template block<1, 6>(8, 0) * dyn_share.h_GNSS(5, 5);
 				for (int m_ = 0; m_ < 3; m_++)
 				{
 					HPHT(m_,m_) += dyn_share.M_Noise;
 				}
 				K = PHT * HPHT.inverse();
-				KH = K * dyn_share.h_GNSS;
+				// KH = K * dyn_share.h_GNSS;
+				KH.template block<n, 1>(0, 0) = K.template block<n, 1>(0, 0) * dyn_share.h_GNSS(0, 0);
+				KH.template block<n, 1>(0, 1) = K.template block<n, 1>(0, 1) * dyn_share.h_GNSS(1, 1);
+				KH.template block<n, 1>(0, 2) = K.template block<n, 1>(0, 2) * dyn_share.h_GNSS(2, 2);
+				// KH.template block<n, 1>(0, 6) = K.template block<n, 1>(0, 3) * dyn_share.h_GNSS(3, 3);
+				// KH.template block<n, 1>(0, 7) = K.template block<n, 1>(0, 4) * dyn_share.h_GNSS(4, 4);
+				// KH.template block<n, 1>(0, 8) = K.template block<n, 1>(0, 5) * dyn_share.h_GNSS(5, 5);
 			}
 			
                                     

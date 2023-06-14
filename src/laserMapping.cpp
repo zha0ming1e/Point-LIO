@@ -26,7 +26,7 @@ const float MOV_THRESHOLD = 1.5f;
 
 string root_dir = ROOT_DIR;
 
-int time_log_counter = 0, publish_count = 0;
+int time_log_counter = 0; //, publish_count = 0;
 
 bool init_map = false, flg_first_scan = true;
 std::vector<ObsPtr> gnss_cur;
@@ -192,7 +192,7 @@ void publish_frame_world(const ros::Publisher & pubLaserCloudFullRes)
         laserCloudmsg.header.stamp = ros::Time().fromSec(lidar_end_time);
         laserCloudmsg.header.frame_id = "camera_init";
         pubLaserCloudFullRes.publish(laserCloudmsg);
-        publish_count -= PUBFRAME_PERIOD;
+        // publish_count -= PUBFRAME_PERIOD;
     }
     
     /**************** save map ****************/
@@ -244,7 +244,7 @@ void publish_frame_body(const ros::Publisher & pubLaserCloudFull_body)
     laserCloudmsg.header.stamp = ros::Time().fromSec(lidar_end_time);
     laserCloudmsg.header.frame_id = "body";
     pubLaserCloudFull_body.publish(laserCloudmsg);
-    publish_count -= PUBFRAME_PERIOD;
+    // publish_count -= PUBFRAME_PERIOD;
 }
 
 template<typename T>
@@ -386,16 +386,11 @@ int main(int argc, char** argv)
 
     kf_input.init_dyn_share_modified_2h(get_f_input, df_dx_input, h_model_input, h_model_GNSS_input);
     kf_output.init_dyn_share_modified_3h(get_f_output, df_dx_output, h_model_output, h_model_IMU_output, h_model_GNSS_output);
-    Eigen::Matrix<double, 18, 18> P_init = MD(18, 18)::Identity() * 0.1;
-    P_init.block<3, 3>(15, 15) = MD(3,3)::Identity() * 0.0001;
-    P_init.block<6, 6>(9, 9) = MD(6,6)::Identity() * 0.001;
-    // P_init.block<6, 6>(6, 6) = MD(6,6)::Identity() * 0.0001;
+    Eigen::Matrix<double, 18, 18> P_init; // = MD(18, 18)::Identity() * 0.1;
+    reset_cov(P_init);
     kf_input.change_P(P_init);
-    Eigen::Matrix<double, 24, 24> P_init_output = MD(24, 24)::Identity() * 0.01;
-    P_init_output.block<3, 3>(15, 15) = MD(3,3)::Identity() * 0.0001;
-    // P_init_output.block<6, 6>(6, 6) = MD(6,6)::Identity() * 0.0001;
-    P_init_output.block<6, 6>(18, 18) = MD(6,6)::Identity() * 0.001;
-    kf_input.change_P(P_init);
+    Eigen::Matrix<double, 24, 24> P_init_output; // = MD(24, 24)::Identity() * 0.01;
+    reset_cov_output(P_init_output);
     kf_output.change_P(P_init_output);
     Eigen::Matrix<double, 18, 18> Q_input = process_noise_cov_input();
     Eigen::Matrix<double, 24, 24> Q_output = process_noise_cov_output();
@@ -804,7 +799,7 @@ int main(int argc, char** argv)
                                         PV_cov.block<3, 3>(3, 0) = kf_output.P_.block<3, 3>(6, 0); PV_cov.block<3, 3>(0, 3) = kf_output.P_.block<3, 3>(0, 6);
                                         // p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 9, 9>>(kf_output.P_.block<9, 9>(0, 0).inverse()).matrixL().transpose();
                                         p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 6, 6>>(PV_cov.inverse()).matrixL().transpose();
-                                        p_gnss->sqrt_lidar *= 0.01;
+                                        p_gnss->sqrt_lidar *= 0.002;
                                         update_gnss = p_gnss->Evaluate(kf_output.x_);
                                         if (!p_gnss->gnss_ready)
                                         {
@@ -821,6 +816,7 @@ int main(int argc, char** argv)
                                         {
                                             kf_output.update_iterated_dyn_share_GNSS();
                                             cout_state_to_file();
+                                            // reset_cov_output(kf_output.P_);
                                         }
                                     }
                                     else
@@ -936,7 +932,7 @@ int main(int argc, char** argv)
                                 PV_cov.block<3, 3>(0, 0) = kf_output.P_.block<3, 3>(0, 0); PV_cov.block<3, 3>(3, 3) = kf_output.P_.block<3, 3>(6, 6);
                                 PV_cov.block<3, 3>(3, 0) = kf_output.P_.block<3, 3>(6, 0); PV_cov.block<3, 3>(0, 3) = kf_output.P_.block<3, 3>(0, 6);
                                 p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 6, 6>>(PV_cov.inverse()).matrixL().transpose();
-                                p_gnss->sqrt_lidar *= 0.01;
+                                p_gnss->sqrt_lidar *= 0.002;
                                 update_gnss = p_gnss->Evaluate(kf_output.x_);
                                 if (!p_gnss->gnss_ready)
                                 {
@@ -952,6 +948,7 @@ int main(int argc, char** argv)
                                 if (update_gnss)
                                 {
                                     kf_output.update_iterated_dyn_share_GNSS();
+                                    // reset_cov_output(kf_output.P_);
                                     cout_state_to_file();
                                 }
                             }
@@ -1178,7 +1175,7 @@ int main(int argc, char** argv)
                                     PV_cov.block<3, 3>(0, 0) = kf_output.P_.block<3, 3>(0, 0); PV_cov.block<3, 3>(3, 3) = kf_output.P_.block<3, 3>(6, 6);
                                     PV_cov.block<3, 3>(3, 0) = kf_output.P_.block<3, 3>(6, 0); PV_cov.block<3, 3>(0, 3) = kf_output.P_.block<3, 3>(0, 6);
                                     p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 6, 6>>(PV_cov.inverse()).matrixL().transpose();
-                                    p_gnss->sqrt_lidar *= 0.01;
+                                    p_gnss->sqrt_lidar *= 0.002;
                                 }
                                 update_gnss = p_gnss->Evaluate(kf_output.x_); 
                                 if (!p_gnss->gnss_ready)
@@ -1196,6 +1193,7 @@ int main(int argc, char** argv)
                                     if (!nolidar)
                                     {
                                         kf_output.update_iterated_dyn_share_GNSS();
+                                        // reset_cov_output(kf_output.P_);
                                     }
                                     cout_state_to_file();
                                 }
@@ -1360,7 +1358,7 @@ int main(int argc, char** argv)
                                     PV_cov.block<3, 3>(0, 0) = kf_input.P_.block<3, 3>(0, 0); PV_cov.block<3, 3>(3, 3) = kf_input.P_.block<3, 3>(6, 6);
                                     PV_cov.block<3, 3>(3, 0) = kf_input.P_.block<3, 3>(6, 0); PV_cov.block<3, 3>(0, 3) = kf_input.P_.block<3, 3>(0, 6);
                                     p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 6, 6>>(PV_cov.inverse()).matrixL().transpose();
-                                    p_gnss->sqrt_lidar *= 0.01;
+                                    p_gnss->sqrt_lidar *= 0.002;
                                     update_gnss = p_gnss->Evaluate(kf_input.x_, input_in.gyro);
                                     if (!p_gnss->gnss_ready)
                                     {
@@ -1375,6 +1373,7 @@ int main(int argc, char** argv)
                                     if (update_gnss)
                                     {
                                         kf_input.update_iterated_dyn_share_GNSS();
+                                        // reset_cov(kf_input.P_);
                                         cout_state_to_file();
                                     }
                                 }
@@ -1476,7 +1475,7 @@ int main(int argc, char** argv)
                             PV_cov.block<3, 3>(0, 0) = kf_input.P_.block<3, 3>(0, 0); PV_cov.block<3, 3>(3, 3) = kf_input.P_.block<3, 3>(6, 6);
                             PV_cov.block<3, 3>(3, 0) = kf_input.P_.block<3, 3>(6, 0); PV_cov.block<3, 3>(0, 3) = kf_input.P_.block<3, 3>(0, 6);
                             p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 6, 6>>(PV_cov.inverse()).matrixL().transpose();
-                            p_gnss->sqrt_lidar *= 0.01;
+                            p_gnss->sqrt_lidar *= 0.002;
                             update_gnss = p_gnss->Evaluate(kf_input.x_, input_in.gyro);
                             if (!p_gnss->gnss_ready)
                             {
@@ -1491,6 +1490,7 @@ int main(int argc, char** argv)
                             if (update_gnss)
                             {
                                 kf_input.update_iterated_dyn_share_GNSS();
+                                // reset_cov(kf_input.P_);
                                 cout_state_to_file();
                             }
                         }
@@ -1715,7 +1715,7 @@ int main(int argc, char** argv)
                                     PV_cov.block<3, 3>(0, 0) = kf_input.P_.block<3, 3>(0, 0); PV_cov.block<3, 3>(3, 3) = kf_input.P_.block<3, 3>(6, 6);
                                     PV_cov.block<3, 3>(3, 0) = kf_input.P_.block<3, 3>(6, 0); PV_cov.block<3, 3>(0, 3) = kf_input.P_.block<3, 3>(0, 6);
                                     p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 6, 6>>(PV_cov.inverse()).matrixL().transpose();
-                                    p_gnss->sqrt_lidar *= 0.01;
+                                    p_gnss->sqrt_lidar *= 0.002;
                                 }
                                 update_gnss = p_gnss->Evaluate(kf_input.x_, input_in.gyro);
                                 if (!p_gnss->gnss_ready)
@@ -1733,6 +1733,7 @@ int main(int argc, char** argv)
                                     if (!nolidar)
                                     {
                                         kf_input.update_iterated_dyn_share_GNSS();
+                                        // reset_cov(kf_input.P_);
                                     }
                                     cout_state_to_file();
                                 }

@@ -96,3 +96,5 @@ void open_file();
 Eigen::Matrix<double, 3, 1> SO3ToEuler(const SO3 &orient);
 void set_gnss_offline_init(bool nolidar_);
 void cout_state_to_file();
+void reset_cov(Eigen::Matrix<double, 18, 18> & P_init);
+void reset_cov_output(Eigen::Matrix<double, 24, 24> & P_init_output);
