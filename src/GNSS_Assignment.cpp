@@ -20,11 +20,11 @@ void GNSSAssignment::initNoises( void ) // maybe usable!
     // priorvelNoiseVector3 << prior_noise, prior_noise, prior_noise;
     // priorvelNoise = gtsam::noiseModel::Diagonal::Variances(priorvelNoiseVector3);
 
-    gtsam::Vector priorNoiseVector6(6);
+    gtsam::Vector priorNoiseVector3(3);
     // priorNoiseVector6 << prior_noise / 1000, prior_noise / 1000, prior_noise / 1000, prior_noise / 1000, prior_noise / 1000, prior_noise / 1000; 
-    priorNoiseVector6 << prior_noise, prior_noise, prior_noise, prior_noise, prior_noise, prior_noise; 
+    priorNoiseVector3 << prior_noise, prior_noise, prior_noise; // prior_noise, prior_noise, prior_noise; 
     //, prior_noise, prior_noise, prior_noise, prior_noise, prior_noise, prior_noise, prior_noise, prior_noise;
-    priorNoise = gtsam::noiseModel::Diagonal::Variances(priorNoiseVector6);
+    priorNoise = gtsam::noiseModel::Diagonal::Variances(priorNoiseVector3);
 
     gtsam::Vector priordtNoiseVector4(4);
     priordtNoiseVector4 << prior_noise, prior_noise, prior_noise, prior_noise;
@@ -42,10 +42,10 @@ void GNSSAssignment::initNoises( void ) // maybe usable!
     margrotNoiseVector3 << prior_noise, prior_noise, prior_noise;
     margrotNoise = gtsam::noiseModel::Diagonal::Variances(margrotNoiseVector3);
 
-    gtsam::Vector margposNoiseVector6(6);
-    margposNoiseVector6 << marg_noise, marg_noise, marg_noise, marg_noise, marg_noise, marg_noise; //,
+    gtsam::Vector margposNoiseVector3(3);
+    margposNoiseVector3 << marg_noise, marg_noise, marg_noise; //, marg_noise, marg_noise, marg_noise; //,
                             // marg_noise, marg_noise, marg_noise; //, marg_noise, marg_noise, marg_noise;
-    margposNoise = gtsam::noiseModel::Diagonal::Variances(margposNoiseVector6);
+    margposNoise = gtsam::noiseModel::Diagonal::Variances(margposNoiseVector3);
 
     gtsam::Vector priorextrotNoiseVector3(3);
     priorextrotNoiseVector3 << prior_noise, prior_noise, prior_noise;
@@ -76,9 +76,9 @@ void GNSSAssignment::initNoises( void ) // maybe usable!
     ddtNoiseVector1 << ddt_noise;
     ddtNoise = gtsam::noiseModel::Diagonal::Variances(ddtNoiseVector1);
 
-    gtsam::Vector odomNoiseVector6(6);
-    odomNoiseVector6 << odo_noise, odo_noise, odo_noise, odo_noise, odo_noise, odo_noise; //, odo_noise, odo_noise, odo_noise;
-    odomNoise = gtsam::noiseModel::Diagonal::Variances(odomNoiseVector6); // should be related to the time, maybe proportional
+    gtsam::Vector odomNoiseVector3(3);
+    odomNoiseVector3 << odo_noise, odo_noise, odo_noise; //, odo_noise, odo_noise, odo_noise; //, odo_noise, odo_noise, odo_noise;
+    odomNoise = gtsam::noiseModel::Diagonal::Variances(odomNoiseVector3); // should be related to the time, maybe proportional
 
     // gtsam::Vector odomNoiseVector3(3);
     // odomNoiseVector3 << odo_noise, odo_noise, odo_noise; //, odo_noise, odo_noise, odo_noise, odo_noise, odo_noise, odo_noise;
@@ -93,8 +93,9 @@ void GNSSAssignment::initNoises( void ) // maybe usable!
 
     double psrNoiseScore = psr_dopp_noise; // constant is ok...
     double doppNoiseScore = psr_dopp_noise; // constant is ok...
-    gtsam::Vector robustpsrdoppNoiseVector2(2); // gtsam::Pose3 factor has 6 elements (6D)
+    gtsam::Vector robustpsrdoppNoiseVector2(2), robustpsrNoiseVector1(1); // gtsam::Pose3 factor has 6 elements (6D)
     robustpsrdoppNoiseVector2 << psrNoiseScore, doppNoiseScore;
+    robustpsrNoiseVector1 << psrNoiseScore; //, doppNoiseScore;
     double cpNoiseScore = cp_noise; // 1e9
     gtsam::Vector robustcpNoiseVector1(1); // gps factor has 3 elements (xyz)
     robustcpNoiseVector1 << cpNoiseScore; // means only caring altitude here. (because LOAM-like-methods tends to be asymptotically flyging)
@@ -104,6 +105,10 @@ void GNSSAssignment::initNoises( void ) // maybe usable!
                       gtsam::noiseModel::mEstimator::Cauchy::Create(outlier_thres), // optional: replacing Cauchy by DCS or GemanMcClure is okay but Cauchy is empirically good.
                       // gtsam::noiseModel::mEstimator::Huber::Create(outlier_thres), // optional: replacing Cauchy by DCS or GemanMcClure is okay but Cauchy is empirically good.
                       gtsam::noiseModel::Diagonal::Variances(robustpsrdoppNoiseVector2));
+      robustpsrNoise = gtsam::noiseModel::Robust::Create(
+                      gtsam::noiseModel::mEstimator::Cauchy::Create(outlier_thres), // optional: replacing Cauchy by DCS or GemanMcClure is okay but Cauchy is empirically good.
+                      // gtsam::noiseModel::mEstimator::Huber::Create(outlier_thres), // optional: replacing Cauchy by DCS or GemanMcClure is okay but Cauchy is empirically good.
+                      gtsam::noiseModel::Diagonal::Variances(robustpsrNoiseVector1));
 
       robustcpNoise = gtsam::noiseModel::Robust::Create(
                       gtsam::noiseModel::mEstimator::Cauchy::Create(outlier_thres), // optional: replacing Cauchy by DCS or GemanMcClure is okay but Cauchy is empirically good.
@@ -406,24 +411,24 @@ void GNSSAssignment::delete_variables(bool nolidar, size_t frame_delete, int fra
             gtsam::noiseModel::Gaussian::shared_ptr updatedPosNoise = gtsam::noiseModel::Gaussian::Covariance(isam.marginalCovariance(A(frame_delete+j))); // important
             // gtsam::noiseModel::Gaussian::shared_ptr updatedPosNoise = gtsam::noiseModel::Gaussian::Covariance(isam.marginalCovariance(F(frame_delete+j))); // important
             gtsam::noiseModel::Gaussian::shared_ptr updatedDtNoise = gtsam::noiseModel::Gaussian::Covariance(isam.marginalCovariance(B(frame_delete+j))); // important
-            gtsam::noiseModel::Gaussian::shared_ptr updatedDdtNoise = gtsam::noiseModel::Gaussian::Covariance(isam.marginalCovariance(C(frame_delete+j))); // important
+            // gtsam::noiseModel::Gaussian::shared_ptr updatedDdtNoise = gtsam::noiseModel::Gaussian::Covariance(isam.marginalCovariance(C(frame_delete+j))); // important
 
             // gtsam::PriorFactor<gtsam::Rot3> init_rot(R(frame_delete+j),isamCurrentEstimate.at<gtsam::Rot3>(R(frame_delete+j)), updatedRotNoise); // margrotNoise);
             // gtsam::PriorFactor<gtsam::Vector12> init_vel(F(frame_delete+j), isamCurrentEstimate.at<gtsam::Vector12>(F(frame_delete+j)), updatedPosNoise); // margposNoise);
-            gtsam::PriorFactor<gtsam::Vector6> init_vel(A(frame_delete+j), isamCurrentEstimate.at<gtsam::Vector6>(A(frame_delete+j)), updatedPosNoise); // margposNoise);
+            gtsam::PriorFactor<gtsam::Vector3> init_vel(A(frame_delete+j), isamCurrentEstimate.at<gtsam::Vector3>(A(frame_delete+j)), updatedPosNoise); // margposNoise);
             gtsam::PriorFactor<gtsam::Vector4> init_dt(B(frame_delete+j), isamCurrentEstimate.at<gtsam::Vector4>(B(frame_delete+j)), updatedDtNoise); // margdtNoise);
-            gtsam::PriorFactor<gtsam::Vector1> init_ddt(C(frame_delete+j), isamCurrentEstimate.at<gtsam::Vector1>(C(frame_delete+j)), updatedDdtNoise); // margddtNoise);
+            // gtsam::PriorFactor<gtsam::Vector1> init_ddt(C(frame_delete+j), isamCurrentEstimate.at<gtsam::Vector1>(C(frame_delete+j)), updatedDdtNoise); // margddtNoise);
             // gtSAMgraph.add(init_rot);
             gtSAMgraph.add(init_vel);
             gtSAMgraph.add(init_dt);
-            gtSAMgraph.add(init_ddt);
-            factor_id_frame[0].push_back(id_accumulate+(j)*3); //4);
-            factor_id_frame[0].push_back(id_accumulate+1+(j)*3); //4);
-            factor_id_frame[0].push_back(id_accumulate+2+(j)*3); //4);
+            // gtSAMgraph.add(init_ddt);
+            factor_id_frame[0].push_back(id_accumulate+(j)*2); //3); //4);
+            factor_id_frame[0].push_back(id_accumulate+1+(j)*2); //3); //4);
+            // factor_id_frame[0].push_back(id_accumulate+2+(j)*2); //3); //4);
             // factor_id_frame[0].push_back(id_accumulate+3+(j)*3); //4);
         }
         // id_accumulate += (j-1) * 4;
-        id_accumulate += j * 3; // 4;
+        id_accumulate += j * 2; /////3; // 4;
       }
       isam.update(gtSAMgraph, initialEstimate);
       gtSAMgraph.resize(0); // will the initialEstimate change?

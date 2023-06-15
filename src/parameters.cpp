@@ -267,43 +267,43 @@ void set_gnss_offline_init(bool nolidar_)
         // p_gnss->gtSAMgraph.add(glio::PriorFactor(B(0), C(0), E(0), P(0), init_value, R_enu_local_, p_gnss->priorNoise));
         // p_gnss->time_frame.push_back(std::pair<double, int>(0.0, 0));
 
-        Eigen::Matrix<double, 6, 1> init_vel_bias_vector;
+        Eigen::Matrix<double, 3, 1> init_vel_bias_vector;
         if (use_imu_as_input)
         {
             init_vel_bias_vector.block<3,1>(0,0) = kf_input.x_.pos;
-            init_vel_bias_vector.block<3,1>(3,0) = kf_input.x_.vel;
-            rot_init = kf_input.x_.rot; //.normalized().toRotationMatrix();
+            // init_vel_bias_vector.block<3,1>(3,0) = kf_input.x_.vel;
+            // rot_init = kf_input.x_.rot; //.normalized().toRotationMatrix();
         }
         else
         {
             init_vel_bias_vector.block<3,1>(0,0) = kf_output.x_.pos;
-            init_vel_bias_vector.block<3,1>(3,0) = kf_output.x_.vel;
-            rot_init = kf_output.x_.rot; //.normalized().toRotationMatrix();
+            // init_vel_bias_vector.block<3,1>(3,0) = kf_output.x_.vel;
+            // rot_init = kf_output.x_.rot; //.normalized().toRotationMatrix();
         }
         // init_vel_bias_vector.block<6,1>(6,0) = Eigen::Matrix<double, 6, 1>::Zero();
-        gtsam::PriorFactor<gtsam::Rot3> init_rot_(R(0), gtsam::Rot3(rot_init), p_gnss->p_assign->priorrotNoise);
-        gtsam::PriorFactor<gtsam::Vector6> init_vel_(A(0), gtsam::Vector6(init_vel_bias_vector), p_gnss->p_assign->priorNoise);
+        // gtsam::PriorFactor<gtsam::Rot3> init_rot_(R(0), gtsam::Rot3(rot_init), p_gnss->p_assign->priorrotNoise);
+        gtsam::PriorFactor<gtsam::Vector3> init_vel_(A(0), gtsam::Vector3(init_vel_bias_vector), p_gnss->p_assign->priorNoise);
         // gtsam::PriorFactor<gtsam::Vector12> init_vel_(F(0), gtsam::Vector12(init_vel_bias_vector), p_gnss->priorposNoise);
         gtsam::PriorFactor<gtsam::Rot3> init_rot_ext(P(0), gtsam::Rot3(R_enu_local_), p_gnss->p_assign->margrotNoise);
         gtsam::PriorFactor<gtsam::Vector3> init_pos_ext(E(0), gtsam::Vector3(offline_init_vec[0], offline_init_vec[1], offline_init_vec[2]), p_gnss->p_assign->margNoise);
         gtsam::PriorFactor<gtsam::Vector4> init_dt_(B(0), gtsam::Vector4(offline_init_vec[5], offline_init_vec[6], offline_init_vec[7], offline_init_vec[8]), p_gnss->p_assign->priordtNoise);
-        gtsam::PriorFactor<gtsam::Vector1> init_ddt_(C(0), gtsam::Vector1(offline_init_vec[4]), p_gnss->p_assign->priorddtNoise);
-        p_gnss->p_assign->gtSAMgraph.add(init_rot_);
+        // gtsam::PriorFactor<gtsam::Vector1> init_ddt_(C(0), gtsam::Vector1(offline_init_vec[4]), p_gnss->p_assign->priorddtNoise);
+        // p_gnss->p_assign->gtSAMgraph.add(init_rot_);
         p_gnss->p_assign->gtSAMgraph.add(init_vel_);
         p_gnss->p_assign->gtSAMgraph.add(init_rot_ext);
         p_gnss->p_assign->gtSAMgraph.add(init_pos_ext);
         p_gnss->p_assign->gtSAMgraph.add(init_dt_);
-        p_gnss->p_assign->gtSAMgraph.add(init_ddt_);
-        p_gnss->p_assign->factor_id_frame.push_back(std::vector<size_t>{0, 1, 2, 3, 4, 5});
+        // p_gnss->p_assign->gtSAMgraph.add(init_ddt_);
+        p_gnss->p_assign->factor_id_frame.push_back(std::vector<size_t>{0, 1, 2, 3}); //, 4, 5});
 
         p_gnss->p_assign->initialEstimate.insert(E(0), gtsam::Vector3(offline_init_vec[0], offline_init_vec[1], offline_init_vec[2]));
         p_gnss->p_assign->initialEstimate.insert(P(0), gtsam::Rot3(R_enu_local_));
-        p_gnss->p_assign->initialEstimate.insert(R(0), gtsam::Rot3(rot_init));
-        p_gnss->p_assign->initialEstimate.insert(A(0), gtsam::Vector6((init_vel_bias_vector)));
+        // p_gnss->p_assign->initialEstimate.insert(R(0), gtsam::Rot3(rot_init));
+        p_gnss->p_assign->initialEstimate.insert(A(0), gtsam::Vector3((init_vel_bias_vector)));
         // p_gnss->initialEstimate.insert(F(0), gtsam::Vector12((init_vel_bias_vector)));
         p_gnss->p_assign->initialEstimate.insert(B(0), gtsam::Vector4(offline_init_vec[5], offline_init_vec[6], offline_init_vec[7], offline_init_vec[8]));
-        p_gnss->p_assign->initialEstimate.insert(C(0), gtsam::Vector1(offline_init_vec[4]));
-        p_gnss->id_accumulate = 6; // 54;
+        // p_gnss->p_assign->initialEstimate.insert(C(0), gtsam::Vector1(offline_init_vec[4]));
+        p_gnss->id_accumulate = 4; //6; // 54;
     
         p_gnss->last_gnss_time = Measures.lidar_beg_time; // imu_first_time;
         p_gnss->state_ = kf_input.x_;

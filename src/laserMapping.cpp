@@ -794,11 +794,7 @@ int main(int argc, char** argv)
                                         time_predict_last_const = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                                         time_update_last = time_predict_last_const;
                                         p_gnss->processGNSS(gnss_cur, kf_output.x_);
-                                        Eigen::Matrix<double, 6, 6> PV_cov = Eigen::Matrix<double, 6, 6>::Zero();
-                                        PV_cov.block<3, 3>(0, 0) = kf_output.P_.block<3, 3>(0, 0); PV_cov.block<3, 3>(3, 3) = kf_output.P_.block<3, 3>(6, 6);
-                                        PV_cov.block<3, 3>(3, 0) = kf_output.P_.block<3, 3>(6, 0); PV_cov.block<3, 3>(0, 3) = kf_output.P_.block<3, 3>(0, 6);
-                                        // p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 9, 9>>(kf_output.P_.block<9, 9>(0, 0).inverse()).matrixL().transpose();
-                                        p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 6, 6>>(PV_cov.inverse()).matrixL().transpose();
+                                        p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 3, 3>>(kf_output.P_.block<3,3>(0, 0).inverse()).matrixL().transpose();
                                         p_gnss->sqrt_lidar *= 0.002;
                                         update_gnss = p_gnss->Evaluate(kf_output.x_);
                                         if (!p_gnss->gnss_ready)
@@ -928,10 +924,7 @@ int main(int argc, char** argv)
                                 time_predict_last_const = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                                 time_update_last = time_predict_last_const;
                                 p_gnss->processGNSS(gnss_cur, kf_output.x_);
-                                Eigen::Matrix<double, 6, 6> PV_cov = Eigen::Matrix<double, 6, 6>::Zero();
-                                PV_cov.block<3, 3>(0, 0) = kf_output.P_.block<3, 3>(0, 0); PV_cov.block<3, 3>(3, 3) = kf_output.P_.block<3, 3>(6, 6);
-                                PV_cov.block<3, 3>(3, 0) = kf_output.P_.block<3, 3>(6, 0); PV_cov.block<3, 3>(0, 3) = kf_output.P_.block<3, 3>(0, 6);
-                                p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 6, 6>>(PV_cov.inverse()).matrixL().transpose();
+                                p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 3, 3>>(kf_output.P_.block<3, 3>(0, 0).inverse()).matrixL().transpose();
                                 p_gnss->sqrt_lidar *= 0.002;
                                 update_gnss = p_gnss->Evaluate(kf_output.x_);
                                 if (!p_gnss->gnss_ready)
@@ -1170,11 +1163,8 @@ int main(int argc, char** argv)
                                 time_predict_last_const = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
                                 p_gnss->processGNSS(gnss_cur, kf_output.x_);
                                 if (!nolidar)
-                                {
-                                    Eigen::Matrix<double, 6, 6> PV_cov = Eigen::Matrix<double, 6, 6>::Zero();
-                                    PV_cov.block<3, 3>(0, 0) = kf_output.P_.block<3, 3>(0, 0); PV_cov.block<3, 3>(3, 3) = kf_output.P_.block<3, 3>(6, 6);
-                                    PV_cov.block<3, 3>(3, 0) = kf_output.P_.block<3, 3>(6, 0); PV_cov.block<3, 3>(0, 3) = kf_output.P_.block<3, 3>(0, 6);
-                                    p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 6, 6>>(PV_cov.inverse()).matrixL().transpose();
+                                {                                
+                                    p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 3, 3>>(kf_output.P_.block<3, 3>(0, 0).inverse()).matrixL().transpose();
                                     p_gnss->sqrt_lidar *= 0.002;
                                 }
                                 update_gnss = p_gnss->Evaluate(kf_output.x_); 
@@ -1353,11 +1343,8 @@ int main(int argc, char** argv)
                                     // p_gnss->pre_integration->push_back(dt, input_in.acc, input_in.gyro);
                                     // p_gnss->processIMU(dt, input_in.acc, input_in.gyro);
                                     t_last = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
-                                    p_gnss->processGNSS(gnss_cur, kf_input.x_, input_in.gyro);                                        
-                                    Eigen::Matrix<double, 6, 6> PV_cov = Eigen::Matrix<double, 6, 6>::Zero();
-                                    PV_cov.block<3, 3>(0, 0) = kf_input.P_.block<3, 3>(0, 0); PV_cov.block<3, 3>(3, 3) = kf_input.P_.block<3, 3>(6, 6);
-                                    PV_cov.block<3, 3>(3, 0) = kf_input.P_.block<3, 3>(6, 0); PV_cov.block<3, 3>(0, 3) = kf_input.P_.block<3, 3>(0, 6);
-                                    p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 6, 6>>(PV_cov.inverse()).matrixL().transpose();
+                                    p_gnss->processGNSS(gnss_cur, kf_input.x_, input_in.gyro);                                                                        
+                                    p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 3, 3>>(kf_input.P_.block<3, 3>(0, 0).inverse()).matrixL().transpose();
                                     p_gnss->sqrt_lidar *= 0.002;
                                     update_gnss = p_gnss->Evaluate(kf_input.x_, input_in.gyro);
                                     if (!p_gnss->gnss_ready)
@@ -1470,11 +1457,8 @@ int main(int argc, char** argv)
                             // p_gnss->pre_integration->push_back(dt, input_in.acc, input_in.gyro);
                             // p_gnss->processIMU(dt, input_in.acc, input_in.gyro);
                             t_last = time2sec(gnss_cur[0]->time) - gnss_local_time_diff;
-                            p_gnss->processGNSS(gnss_cur, kf_input.x_, input_in.gyro);                                        
-                            Eigen::Matrix<double, 6, 6> PV_cov = Eigen::Matrix<double, 6, 6>::Zero();
-                            PV_cov.block<3, 3>(0, 0) = kf_input.P_.block<3, 3>(0, 0); PV_cov.block<3, 3>(3, 3) = kf_input.P_.block<3, 3>(6, 6);
-                            PV_cov.block<3, 3>(3, 0) = kf_input.P_.block<3, 3>(6, 0); PV_cov.block<3, 3>(0, 3) = kf_input.P_.block<3, 3>(0, 6);
-                            p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 6, 6>>(PV_cov.inverse()).matrixL().transpose();
+                            p_gnss->processGNSS(gnss_cur, kf_input.x_, input_in.gyro);                                                                            
+                            p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 3, 3>>(kf_input.P_.block<3, 3>(0, 0).inverse()).matrixL().transpose();
                             p_gnss->sqrt_lidar *= 0.002;
                             update_gnss = p_gnss->Evaluate(kf_input.x_, input_in.gyro);
                             if (!p_gnss->gnss_ready)
@@ -1711,10 +1695,7 @@ int main(int argc, char** argv)
                                 p_gnss->processGNSS(gnss_cur, kf_input.x_, input_in.gyro);
                                 if (!nolidar)
                                 {                                        
-                                    Eigen::Matrix<double, 6, 6> PV_cov = Eigen::Matrix<double, 6, 6>::Zero();
-                                    PV_cov.block<3, 3>(0, 0) = kf_input.P_.block<3, 3>(0, 0); PV_cov.block<3, 3>(3, 3) = kf_input.P_.block<3, 3>(6, 6);
-                                    PV_cov.block<3, 3>(3, 0) = kf_input.P_.block<3, 3>(6, 0); PV_cov.block<3, 3>(0, 3) = kf_input.P_.block<3, 3>(0, 6);
-                                    p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 6, 6>>(PV_cov.inverse()).matrixL().transpose();
+                                    p_gnss->sqrt_lidar = Eigen::LLT<Eigen::Matrix<double, 3, 3>>(kf_input.P_.block<3, 3>(0, 0).inverse()).matrixL().transpose();
                                     p_gnss->sqrt_lidar *= 0.002;
                                 }
                                 update_gnss = p_gnss->Evaluate(kf_input.x_, input_in.gyro);

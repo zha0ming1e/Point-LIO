@@ -87,7 +87,7 @@ class GNSSProcess
   state_output state_const_last;
   double relative_sqrt_info = 10;
   double cp_weight = 1.0;
-  Eigen::Matrix<double, 6, 6> sqrt_lidar;
+  Eigen::Matrix<double, 3, 3> sqrt_lidar;
   double odo_weight1 = 1.0;
   double odo_weight2 = 1.0;
   double odo_weight3 = 1.0;

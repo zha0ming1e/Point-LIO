@@ -23,9 +23,11 @@
 #include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
 #include <gtsam/nonlinear/ISAM2.h>
 
-#include <gnss_factor/gnss_cp_factor_nor.hpp>
+#include <gnss_factor/gnss_cp_factor_norv.hpp>
+// #include <gnss_factor/gnss_cp_factor_nor.hpp>
 // #include <gnss_factor/gnss_cp_factor_pos.hpp>
-#include <gnss_factor/gnss_lio_hard_factor_nor.hpp>
+#include <gnss_factor/gnss_lio_hard_factor_norv.hpp>
+// #include <gnss_factor/gnss_lio_hard_factor_nor.hpp>
 // #include <gnss_factor/gnss_lio_gravity_factor.hpp>
 #include <gnss_factor/gnss_cp_factor_nolidar.hpp>
 // #include <gnss_factor/gnss_cp_factor_nolidar_pos.hpp>
@@ -34,7 +36,8 @@
 // #include <gnss_factor/gnss_lio_factor.hpp>
 #include <gnss_factor/gnss_lio_factor_nolidar.hpp>
 #include <gnss_factor/gnss_prior_factor.hpp>
-#include <gnss_factor/gnss_psr_dopp_factor_nor.hpp>
+#include <gnss_factor/gnss_psr_dopp_factor_norv.hpp>
+// #include <gnss_factor/gnss_psr_dopp_factor_nor.hpp>
 // #include <gnss_factor/gnss_psr_dopp_factor_pos.hpp>
 #include <gnss_factor/gnss_psr_dopp_factor_nolidar.hpp>
 // #include <gnss_factor/gnss_psr_dopp_factor_nolidar_pos.hpp>
@@ -112,6 +115,7 @@ class GNSSAssignment
         // gtsam::noiseModel::Diagonal::shared_ptr odomNoiseIMU;
         gtsam::noiseModel::Base::shared_ptr odomNoiseIMU;
         gtsam::noiseModel::Base::shared_ptr robustpsrdoppNoise;
+        gtsam::noiseModel::Base::shared_ptr robustpsrNoise;
         gtsam::noiseModel::Base::shared_ptr robustcpNoise;
         // gtsam::noiseModel::Gaussian::shared_ptr testNoise;
         void initNoises(void); 
